@@ -1,0 +1,86 @@
+<h3>Contributions</h3>
+
+{{if .All}}
+<a href="/checkout">Available</a><br/>
+{{else}}
+<a href="/checkout/all">All</a><br/>
+{{end}}
+<table class="table table-hover shadow table-sm">
+  <thead class="thead-light">
+    <tr>
+      <th scope="col">Beer / Brewery</th>
+      <th scope="col">Contributed</th>
+      <th scope="col">Unit Price</th>
+      <th scope="col">Remaining/Total</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+<tbody>
+{{ range .Contributions }}
+<tr {{if lt .Remaining 1}}class="table-danger"{{end}}>
+	  <td>
+          {{if .GetBeer.LabelURL}}
+          <img src="{{.GetBeer.LabelURL}}" height="100" class="rounded float-left mr-2"/>
+          {{end}}
+		  <a href="https://untappd.com/beer/{{.GetBeer.UntappdID}}">{{.GetBeer.Name}}</a><br/>
+		  <i><small><a href="https://untappd.com/brewery/{{.GetBeer.BreweryID}}">{{.GetBeer.Brewery}}</a></small></i>
+      <div>
+		<a href="https://untappd.com/beer/{{.GetBeer.UntappdID}}">
+		<img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.GetBeer.RatingWidth}}px,27px,0px);" title="{{.GetBeer.UntappdRating}}"></a>
+	  </div>
+	  </td>
+	  <td>{{.GetUser.Name}}<br/><i><small>on {{.Date.Format "2 Jan '06"}}</small></i></td>
+	  <td>{{printf "$%.2f" .UnitPrice}}</td>
+	  <td><b>{{.Remaining}}</b> / {{.Quantity}}<br/><small><i><a href="/checkout/detail/{{.ID}}">Details</a></i></td>
+        <td>
+	<button class="btn btn-success btn-sm mb-2" data-toggle="modal" data-target="#addContModal" data-beerid="{{.GetBeer.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}">
+  Contribute
+	</button>
+	<br/>
+	<button class="btn btn-success btn-sm" {{if lt .GetBeer.Available 1}}disabled{{end}} data-toggle="modal" data-target="#takeContModal" data-contid="{{.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}">
+  Checkout
+	</button>
+      </td>
+    </tr>
+{{else}}
+<tr><td colspan="5">No beer found - go buy some!</td></tr>
+{{end}}
+</tbody>
+</table>
+
+{{ template "contModal.html" .}}
+
+<div class="modal fade" id="takeContModal" tabindex="-1" role="dialog" aria-labelledby="takeContModalLabel" aria-hidden="true">
+ <div class="modal-dialog" role="document">
+  <div class="modal-content">
+   <div class="modal-header">
+     <h5 class="modal-title" id="takeContModalLabel">Checkout beer</h5>
+     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+     </button>
+   </div>
+   <div class="modal-body">
+<form method="post" enctype="multipart/form-data" action="/checkout">
+  <div class="form-group">
+    <label for="user">User</label>
+    <select class="custom-select" name="userid">
+<option selected value="0">Select user</option>
+{{ range .Users }}
+<option value="{{.ID}}">{{.Name}}</option>
+{{end}}
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="quantity">Quantity</label>
+    <input class="form-control" name="quantity" id="quantity">
+  </div>
+   </div>
+   <div class="modal-footer">
+     <input type="hidden" name="contid" value=""/>
+     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+     <button type="submit" class="btn btn-primary">Submit</button>
+   </div>
+</form>
+  </div>
+ </div>
+</div>

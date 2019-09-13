@@ -1,0 +1,65 @@
+<h3>Beers</h3>
+<button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addBeerModal">
+Add beer
+</button>
+<br/><br/>
+
+<table class="table table-hover shadow table-sm">
+  <thead class="thead-light">
+    <tr>
+      <th scope="col">Beer/Brewery</th>
+      <th scope="col">Available</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+<tbody>
+{{ range .Beers }}
+  <tr>
+    <td>
+     <img src="{{.LabelURL}}" height="100" class="rounded float-left m-2"/>
+	 <a href="https://untappd.com/beer/{{.UntappdID}}">{{.Name}}</a><br/>
+	 <i><small><a href="https://untappd.com/brewery/{{.BreweryID}}">{{.Brewery}}</a></small></i>
+		<a href="https://untappd.com/beer/{{.UntappdID}}"><br/>
+		<img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.RatingWidth}}px,27px,0px);" title="{{.UntappdRating}}"></a>
+    </td>
+    <td>{{.Available}}</td>
+    <td>
+	<button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addContModal" data-beerid="{{.ID}}" data-beername="{{.Name}}" data-brewer="{{.Brewery}}">
+  Contribute
+	</button>
+    </td>
+  </tr>
+{{else}}
+<tr><td colspan="4">No beer found - go buy some!</td></tr>
+{{end}}
+</tbody>
+</table>
+
+{{template "contModal.html" .}}
+
+<div class="modal fade" id="addBeerModal" tabindex="-1" role="dialog" aria-labelledby="addBeerModalLabel" aria-hidden="true">
+ <div class="modal-dialog" role="document">
+  <div class="modal-content">
+   <div class="modal-header">
+     <h5 class="modal-title" id="addModalLabel">Add a beer</h5>
+     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+     </button>
+   </div>
+   <div class="modal-body">
+<form method="post" enctype="multipart/form-data" action="/beers/add">
+  <div class="form-group">
+    <label for="untappdid">Untappd ID</label>
+    <input class="form-control" type="text" name="untappdid" id="untappdid" autofocus>
+  </div>
+  <div id="untappdresult"></div>
+   <div class="modal-footer">
+     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+     <button type="submit" class="btn btn-primary">Submit</button>
+   </div>
+</form>
+  </div>
+ </div>
+</div>
+
+

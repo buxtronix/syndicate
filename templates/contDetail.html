@@ -1,0 +1,159 @@
+<h3>Contribution</h3>
+
+<div class="shadow card">
+ <div class="card-header">
+  <h5 class="float-left">Contribution detail</h5>
+  <div class="float-right">
+	<button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addContModal"  data-beerid="{{.Contribution.GetBeer.ID}}" data-beername="{{.Contribution.GetBeer.Name}}" data.brewer="{{.Contribution.GetBeer.Brewery}}">
+  Contribute
+	</button>
+  </div>
+ </div>
+ <div class="card-body">
+  <div class="card-title">
+    {{if .Contribution.GetBeer.LabelURL}}
+    <img src="{{.Contribution.GetBeer.LabelURL}}" height="100" class="rounded float-left mr-2 mb-2"/>
+    {{end}}
+    <div class="float-left">
+	 <a href="https://untappd.com/beer/{{.Contribution.GetBeer.UntappdID}}">{{.Contribution.GetBeer.Name}}</a><br/>
+	 <i><small><a href="https://untappd.com/brewery/{{.Contribution.GetBeer.BreweryID}}">{{.Contribution.GetBeer.Brewery}}</a></small></i>
+	<br/><img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.Contribution.GetBeer.RatingWidth}}px,27px,0px);" title="{{.Contribution.GetBeer.UntappdRating}}"></a>
+    </div>
+  </div>
+  <table class="table table-sm">
+    <tbody>
+    <tr><th scope="col">Date</th><td>{{.Contribution.Date.Format "2 Jan 2006"}}</td></tr>
+    <tr><th scope="col">Person</th><td>{{.Contribution.GetUser.Name}}</td></tr>
+    <tr><th scope="col">Quantity</th><td>{{.Contribution.Quantity}} <i>({{.Contribution.Remaining}} left)</i></td></tr>
+    <tr><th scope="col">Unit Price</th><td>{{printf "$%.2f" .Contribution.UnitPrice}}</td></tr>
+    </tbody>
+  </table>
+  <div class="float-right">
+	<button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editContModal">
+  Edit
+	</button>
+    {{ if eq .Contribution.Remaining .Contribution.Quantity }}
+	<button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#delContribModal">
+  Delete
+	</button>
+    {{end}}
+  </div>
+ </div>
+</div>
+<br/><br/>
+<h4>Checkouts</h4>
+<table class="table table-hover shadow table-sm">
+  <thead class="thead-light">
+    <tr>
+      <th scope="col">Date</th>
+      <th scope="col">Person</th>
+      <th scope="col">Quantity</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+<tbody>
+{{$cont := .Contribution}}
+{{ range .Contribution.GetCheckouts }}
+<tr>
+	  <td>{{.Date.Format "2 Jan 2006"}}</td>
+	  <td>{{.GetUser.Name}}</td>
+	  <td>{{.Quantity}}</td>
+        <td>
+	<button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#delCheckoutModal" data-coid="{{.ID}}" data-contid="{{$cont.ID}}">
+  Delete
+	</button>
+      </td>
+    </tr>
+{{end}}
+</tbody>
+</table>
+
+{{template "contModal.html" .}}
+
+<div class="modal fade" id="delCheckoutModal" tabindex="-1" role="dialog" aria-labelledby="delCheckoutModalLabel" aria-hidden="true">
+ <div class="modal-dialog" role="document">
+  <div class="modal-content">
+   <div class="modal-header">
+    <h5 class="modal-title" id="delCheckoutModalLabel">Delete checkout</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+     <span aria-hidden="true">&times;</span>
+    </button>
+   </div>
+   <div class="modal-body">
+    <form method="post" enctype="multipart/form-data" action="/checkout/delete">
+     <div class="alert alert-danger" role="alert">
+	 Really remove this checkout?
+     </div>
+     <div class="modal-footer">
+      <input type="hidden" name="coid" value=""/>
+      <input type="hidden" name="contid" value=""/>
+      <input type="hidden" name="magic" value="Netops!"/>
+      <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+      <button type="submit" class="btn btn-primary">Delete</button>
+     </div>
+    </form>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="modal fade" id="delContribModal" tabindex="-1" role="dialog" aria-labelledby="delContribModalLabel" aria-hidden="true">
+ <div class="modal-dialog" role="document">
+  <div class="modal-content">
+   <div class="modal-header">
+    <h5 class="modal-title" id="delContribModalLabel">Delete contribution</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+     <span aria-hidden="true">&times;</span>
+    </button>
+   </div>
+   <div class="modal-body">
+    <form method="post" enctype="multipart/form-data" action="/contribute/delete/{{.Contribution.ID}}">
+     <div class="alert alert-danger" role="alert">
+	 Really remove this contribution?
+     </div>
+     <div class="modal-footer">
+      <input type="hidden" name="magic" value="Netops!"/>
+      <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+      <button type="submit" class="btn btn-primary">Delete</button>
+     </div>
+    </form>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="modal fade" id="editContModal" tabindex="-1" role="dialog" aria-labelledby="editContModalLabel" aria-hidden="true">
+ <div class="modal-dialog" role="document">
+  <div class="modal-content">
+   <div class="modal-header">
+     <h5 class="modal-title" id="editContModalLabel">Edit contribution</h5>
+     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+     </button>
+   </div>
+   <div class="modal-body">
+    <form method="post" enctype="multipart/form-data" action="/contribute/edit/{{.Contribution.ID}}">
+     <div class="form-group">
+      <label for="quantity">Quantity</label>
+      <input class="form-control" name="quantity" id="quantity" value="{{.Contribution.Quantity}}">
+     </div>
+     <div class="form-row">
+	  <div class="col">
+	   <label for="unitprice">Unit Price</label>
+	   <div class="input-group">
+	    <div class="input-group-prepend">
+		    <span class="input-group-text">$</span>
+	    </div>
+	    <input class="form-control" name="unitprice" id="unitprice" value="{{.Contribution.UnitPrice}}">
+	   </div>
+	  </div>
+     </div>
+    </div>
+    <div class="modal-footer">
+     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+     <button type="submit" class="btn btn-primary">Submit</button>
+    </div>
+   </form>
+  </div>
+ </div>
+</div>
