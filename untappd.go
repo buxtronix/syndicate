@@ -4,35 +4,53 @@ package syndicate
 import (
 	"math"
 	"net/http"
+	"time"
 
 	"github.com/mdlayher/untappd"
+	gocache "github.com/patrickmn/go-cache"
 )
 
 var (
-	utc           *untappd.Client
-	UntappdID     string
-	UntappdSecret string
+	Untappd *UntappdClient
 )
 
-func makeUTC() {
-	var err error
-	if utc != nil {
-		return
-	}
-	utc, err = untappd.NewClient(UntappdID, UntappdSecret, &http.Client{})
+type UntappdClient struct {
+	utc          *untappd.Client
+	checkinCache *gocache.Cache
+}
+
+func NewUntappdClient(untappdID, untappdSecret string) error {
+	utc, err := untappd.NewClient(untappdID, untappdSecret, &http.Client{})
 	if err != nil {
-		panic(err)
+		return err
 	}
+	Untappd = &UntappdClient{
+		utc: utc,
+		checkinCache: gocache.New(
+			10*time.Minute,
+			10*time.Minute,
+		),
+	}
+	return nil
 }
 
 // UntappdGetBeerInfo returns untappd info, given an untappd beer id.
-func UntappdGetBeerInfo(id int64) (*untappd.Beer, *http.Response, error) {
-	makeUTC()
-	return utc.Beer.Info(int(id), true)
+func (u *UntappdClient) GetBeerInfo(id int64) (*untappd.Beer, *http.Response, error) {
+	return u.utc.Beer.Info(int(id), true)
 }
 
 // UntappdGetUserCheckins returns the last 'count' untappd checkins for 'user'.
-func UntappdGetUserCheckins(id string, count int) ([]*untappd.Checkin, *http.Response, error) {
-	makeUTC()
-	return utc.User.CheckinsMinMaxIDLimit(id, 0, math.MaxInt32, count)
+func (u *UntappdClient) GetUserCheckins(id string, count int) ([]*untappd.Checkin, error) {
+	checkins, found := u.checkinCache.Get(id)
+	if found {
+		return checkins.([]*untappd.Checkin), nil
+	}
+	newCheckins, _, err := u.utc.User.CheckinsMinMaxIDLimit(id, 0, math.MaxInt32, count)
+	if err != nil {
+		return nil, err
+	}
+	if err := u.checkinCache.Add(id, newCheckins, gocache.DefaultExpiration); err != nil {
+		return nil, err
+	}
+	return newCheckins, nil
 }

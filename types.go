@@ -75,7 +75,7 @@ func (u *User) LastCheckins(count int) ([]*untappd.Checkin, error) {
 	if u.UntappdID == "" {
 		return nil, nil
 	}
-	checkins, _, err := UntappdGetUserCheckins(u.UntappdID, count)
+	checkins, err := Untappd.GetUserCheckins(u.UntappdID, count)
 	if err != nil {
 		return nil, err
 	}

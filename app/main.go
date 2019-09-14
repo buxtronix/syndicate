@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
@@ -19,6 +20,7 @@ var (
 	usersTmpl      = parseTemplate("users.html")
 	contributeTmpl = parseTemplate("contributions.html")
 	contDetailTmpl = parseTemplate("contDetail.html")
+	activityTmpl   = parseTemplate("activity.html")
 )
 
 var (
@@ -35,9 +37,9 @@ func main() {
 		log.Printf("Warning: Missing -untapped_id which breaks untappd functionality")
 	case *untappdSecret == "":
 		log.Printf("Warning: Missing -untapped_secret which breaks untappd functionality")
-	default:
-		syndicate.UntappdID = *untappdID
-		syndicate.UntappdSecret = *untappdSecret
+	}
+	if err := syndicate.NewUntappdClient(*untappdID, *untappdSecret); err != nil {
+		log.Fatal(err)
 	}
 	registerHandlers()
 	if err := syndicate.OpenDatabase(*dbFile); err != nil {
@@ -78,6 +80,9 @@ func registerHandlers() {
 		Handler(appHandler(usersHandler))
 	r.Methods("POST").Path("/users/add").
 		Handler(appHandler(userAddHandler))
+
+	r.Methods("GET").Path("/activity").
+		Handler(appHandler(activityHandler))
 
 	r.Methods("POST").Path("/untappd/beer").Handler(appHandler(untappdBeerHandler))
 
@@ -129,7 +134,7 @@ func addBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 		Name:      r.FormValue("name"),
 		UntappdID: uti,
 	}
-	bInfo, _, err := syndicate.UntappdGetBeerInfo(uti)
+	bInfo, _, err := syndicate.Untappd.GetBeerInfo(uti)
 	if err != nil {
 		return appErrorf(err, "error querying untappd: %v", err)
 	}
@@ -158,7 +163,7 @@ func untappdBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 			return nil
 		}
 	}
-	bInfo, _, err := syndicate.UntappdGetBeerInfo(uti)
+	bInfo, _, err := syndicate.Untappd.GetBeerInfo(uti)
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("error querying untappd: %v", err)))
 		return nil
@@ -375,6 +380,47 @@ func addCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 	}
 	http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
 	return nil
+}
+
+// activityHandler handles display of all activity.
+func activityHandler(w http.ResponseWriter, r *http.Request) *appError {
+	/*
+		users, err := syndicate.DB.ListUsers()
+		if err != nil {
+			return appErrorf(err, "could not fetch user list: %v", err)
+		}
+	*/
+	contribs, err := syndicate.DB.ListContributions()
+	if err != nil {
+		return appErrorf(err, "could not fetch contribution list: %v", err)
+	}
+	checkouts, err := syndicate.DB.ListCheckouts()
+	if err != nil {
+		return appErrorf(err, "could not fetch checkout list: %v", err)
+	}
+	type oneActivity struct {
+		Contrib  *syndicate.Contribution
+		Checkout *syndicate.Checkout
+		Time     time.Time
+	}
+	activity := []*oneActivity{}
+	for _, c := range contribs {
+		activity = append(activity, &oneActivity{
+			Contrib: c,
+			Time:    c.Date,
+		})
+	}
+	for _, c := range checkouts {
+		activity = append(activity, &oneActivity{
+			Checkout: c,
+			Time:     c.Date,
+		})
+	}
+	sort.Slice(activity, func(i, j int) bool {
+		return activity[i].Time.After(activity[j].Time)
+	})
+	return activityTmpl.Execute(w, r, activity)
+
 }
 
 // usersHandler handles display of user stats.
