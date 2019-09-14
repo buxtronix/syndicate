@@ -16,7 +16,7 @@
     <tr class="text-success">
       <td>{{.Time.Format "2 Jan 2006 15:04"}}</td>
       <td>{{.Contrib.GetUser.Name}}</td>
-      <td><a href="/checkout/detail/{{.Contrib.ID}}">contributed</a></td>
+      <td><a href="/contribute/detail/{{.Contrib.ID}}">contributed</a></td>
       <td>{{.Contrib.Quantity}}</td>
       <td><a href="https://untappd.com/beer/{{.Contrib.GetBeer.UntappdID}}" target=_blank>{{.Contrib.GetBeer.Name}}</a> <small><i>/ {{.Contrib.GetBeer.Brewery}}</i></small>
     </tr>

@@ -60,8 +60,6 @@ func registerHandlers() {
 
 	r.Methods("GET").Path("/checkout").
 		Handler(appHandler(getCheckoutHandler))
-	r.Methods("GET").Path("/checkout/detail/{id:.+}").
-		Handler(appHandler(getCheckoutDetailHandler))
 	r.Methods("POST").Path("/checkout/delete").
 		Handler(appHandler(getCheckoutDeleteHandler))
 	r.Methods("GET").Path("/checkout/{which:.+}").
@@ -69,6 +67,8 @@ func registerHandlers() {
 	r.Methods("POST").Path("/checkout").
 		Handler(appHandler(addCheckoutHandler))
 
+	r.Methods("GET").Path("/contribute/detail/{id:.+}").
+		Handler(appHandler(getContributeDetailHandler))
 	r.Methods("POST").Path("/contribute/delete/{id:.}").
 		Handler(appHandler(deleteContributeHandler))
 	r.Methods("POST").Path("/contribute/edit/{id:.}").
@@ -263,8 +263,8 @@ func addContributeHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return nil
 }
 
-// getCheckoutDetailHandler shows checkout detail.
-func getCheckoutDetailHandler(w http.ResponseWriter, r *http.Request) *appError {
+// getContributeDetailHandler shows contribution detail.
+func getContributeDetailHandler(w http.ResponseWriter, r *http.Request) *appError {
 	users, err := syndicate.DB.ListUsers()
 	if err != nil {
 		return appErrorf(err, "could not fetch user list: %v", err)

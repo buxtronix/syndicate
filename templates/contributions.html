@@ -31,7 +31,7 @@
 	  </td>
 	  <td>{{.GetUser.Name}}<br/><i><small>on {{.Date.Format "2 Jan '06"}}</small></i></td>
 	  <td>{{printf "$%.2f" .UnitPrice}}</td>
-      <td><font size="+1"><b>{{.Remaining}}</b></font> / {{.Quantity}}<br/><small><i><a href="/checkout/detail/{{.ID}}">Details</a></i></td>
+      <td><font size="+1"><b>{{.Remaining}}</b></font> / {{.Quantity}}<br/><small><i><a href="/contribute/detail/{{.ID}}">Details</a></i></td>
         <td>
 	<button class="btn btn-success btn-sm mb-2" data-toggle="modal" data-target="#addContModal" data-beerid="{{.GetBeer.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}">
   Contribute
