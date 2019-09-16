@@ -262,6 +262,11 @@ func (c *Checkout) GetUser() (*User, error) {
 	return nil, fmt.Errorf("did not find user with id %d", c.User)
 }
 
+// GetContribution gets the contribution.
+func (c *Checkout) GetContribution() (*Contribution, error) {
+	return GetContribution(c.Contribution)
+}
+
 // DB is the database handler.
 var DB BeerDatabase
 

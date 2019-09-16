@@ -11,7 +11,7 @@
       <th scope="col">Beer / Brewery</th>
       <th scope="col">Contributed</th>
       <th scope="col">Unit Price</th>
-      <th scope="col">Remaining/Total</th>
+      <th scope="col">Remaining</th>
       <th scope="col">Actions</th>
     </tr>
   </thead>
@@ -29,9 +29,9 @@
 		<img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.GetBeer.RatingWidth}}px,27px,0px);" title="{{.GetBeer.UntappdRating}}"></a>
 	  </div>
 	  </td>
-	  <td>{{.GetUser.Name}}<br/><i><small>on {{.Date.Format "2 Jan '06"}}</small></i></td>
+      <td><b>{{.Quantity}}</b>&nbsp;by&nbsp;{{.GetUser.Name}}<br/><i><small>on {{.Date.Format "2 Jan '06"}}</small></i></td>
 	  <td>{{printf "$%.2f" .UnitPrice}}</td>
-      <td><font size="+1"><b>{{.Remaining}}</b></font> / {{.Quantity}}<br/><small><i><a href="/contribute/detail/{{.ID}}">Details</a></i></td>
+      <td><font size="+1"><b>{{.Remaining}}</b></font><br/><small><i><a href="/contribute/detail/{{.ID}}">Details</a></i></td>
         <td>
 	<button class="btn btn-success btn-sm mb-2" data-toggle="modal" data-target="#addContModal" data-beerid="{{.GetBeer.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}">
   Contribute
