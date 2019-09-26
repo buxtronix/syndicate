@@ -90,6 +90,11 @@ func registerHandlers() {
 	http.Handle("/", handlers.CombinedLoggingHandler(os.Stderr, r))
 }
 
+type beerForm struct {
+	Beers []*syndicate.Beer
+	Users []*syndicate.User
+}
+
 // beersHandler handles display of contributed beers.
 func beersHandler(w http.ResponseWriter, r *http.Request) *appError {
 	beers, err := syndicate.DB.ListBeers()
@@ -100,14 +105,11 @@ func beersHandler(w http.ResponseWriter, r *http.Request) *appError {
 	if err != nil {
 		return appErrorf(err, "could not fetch user list: %v", err)
 	}
-	beerForm := struct {
-		Beers []*syndicate.Beer
-		Users []*syndicate.User
-	}{
+	bf := &beerForm{
 		Beers: beers,
 		Users: users,
 	}
-	return listTmpl.Execute(w, r, beerForm)
+	return listTmpl.Execute(w, r, bf)
 }
 
 // addBeerHandler handles adding beer.
@@ -384,34 +386,40 @@ func addCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 
 // activityHandler handles display of all activity.
 func activityHandler(w http.ResponseWriter, r *http.Request) *appError {
-	/*
-		users, err := syndicate.DB.ListUsers()
-		if err != nil {
-			return appErrorf(err, "could not fetch user list: %v", err)
-		}
-	*/
+	activity, err := getActivity()
+	if err != nil {
+		return appErrorf(err, "%v", err)
+	}
+	return activityTmpl.Execute(w, r, activity)
+}
+
+type oneActivity struct {
+	User     int64
+	Contrib  *syndicate.Contribution
+	Checkout *syndicate.Checkout
+	Time     time.Time
+}
+
+func getActivity() ([]*oneActivity, error) {
 	contribs, err := syndicate.DB.ListContributions()
 	if err != nil {
-		return appErrorf(err, "could not fetch contribution list: %v", err)
+		return nil, fmt.Errorf("could not fetch contribution list: %v", err)
 	}
 	checkouts, err := syndicate.DB.ListCheckouts()
 	if err != nil {
-		return appErrorf(err, "could not fetch checkout list: %v", err)
-	}
-	type oneActivity struct {
-		Contrib  *syndicate.Contribution
-		Checkout *syndicate.Checkout
-		Time     time.Time
+		return nil, fmt.Errorf("could not fetch checkout list: %v", err)
 	}
 	activity := []*oneActivity{}
 	for _, c := range contribs {
 		activity = append(activity, &oneActivity{
+			User:    c.User,
 			Contrib: c,
 			Time:    c.Date,
 		})
 	}
 	for _, c := range checkouts {
 		activity = append(activity, &oneActivity{
+			User:     c.User,
 			Checkout: c,
 			Time:     c.Date,
 		})
@@ -419,8 +427,7 @@ func activityHandler(w http.ResponseWriter, r *http.Request) *appError {
 	sort.Slice(activity, func(i, j int) bool {
 		return activity[i].Time.After(activity[j].Time)
 	})
-	return activityTmpl.Execute(w, r, activity)
-
+	return activity, nil
 }
 
 // usersHandler handles display of user stats.
@@ -429,7 +436,18 @@ func usersHandler(w http.ResponseWriter, r *http.Request) *appError {
 	if err != nil {
 		return appErrorf(err, "could not fetch user list: %v", err)
 	}
-	return usersTmpl.Execute(w, r, users)
+	activity, err := getActivity()
+	if err != nil {
+		return appErrorf(err, "could not fetch activity list: %v", err)
+	}
+	ud := struct {
+		Users    []*syndicate.User
+		Activity []*oneActivity
+	}{
+		Users:    users,
+		Activity: activity,
+	}
+	return usersTmpl.Execute(w, r, ud)
 }
 
 // userAddHandler handles adding of a new user.

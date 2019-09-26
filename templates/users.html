@@ -1,3 +1,13 @@
+<style>
+td .userDetails[aria-expanded="false"]:before{
+      content:"+";
+}
+
+td .userDetails[aria-expanded="true"]:before{
+      content:"-";
+}
+</style>
+
 <h3>Users</h3>
 <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addUserModal">
 	Add User
@@ -15,9 +25,15 @@
     </tr>
   </thead>
 <tbody>
-{{ range . }}
+{{ $activity := .Activity }}
+{{ range .Users }}
+  {{ $user := . }}
   <tr>
-    <td>{{.Name}}</td>
+      <td>
+          <small><a class="btn btn-success btn-sm userDetails mr-2" aria-expanded="false" aria-controls="collapse{{.Name}}" data-toggle="collapse" href="#collapse{{.Name}}"></a></small>
+      {{.Name}}
+      </td>
+      <!--      <td data-toggle="collapse" href="#collapse{{.Name}}">{{.Name}}</td> -->
     <td>
     {{/*
     {{range .LastCheckins 1}}
@@ -32,6 +48,34 @@
     <td>{{printf "$%.2f" .TotalTaken}}</td>
     <td {{if lt .NetPosition 0.0}}class="table-danger"{{end}}>{{printf "$%.2f" .NetPosition}}</td>
   </tr>
+  <tr class="collapse" id="collapse{{$user.Name}}"><td colspan="6" align="center" aria-expanded="false">
+          <div class="container">
+          {{ range $activity }}{{ if eq .User $user.ID }}
+              <div class="row w-75 text-success">
+              {{ if .Contrib }}
+                  <div class="col-sm-3">
+                      <small>{{.Time.Format "2 Jan 2006 15:04" }}</small>
+                  </div>
+                  <div class="col-sm-2 text-right">
+                      <a href="/contribute/detail/{{.Contrib.ID}}">contributed</a> {{.Contrib.Quantity}}
+                  </div>
+                  <div class="col-sm text-left"><a href="https://untappd.com/beer/{{.Contrib.GetBeer.UntappdID}}" target=_blank>{{.Contrib.GetBeer.Name}}</a> <small><i>/ {{.Contrib.GetBeer.Brewery}}</i></small>
+                  </div>
+              {{ end }}
+              {{ if .Checkout }}
+                  <div class="col-sm-3 text-warning">
+                      <small>{{.Time.Format "2 Jan 2006 15:04" }}</small>
+                  </div>
+                  <div class="col-sm-2 text-right">
+                      checked out {{.Checkout.Quantity}}
+                  </div>
+                  <div class="col-sm text-left">
+                 <a href="https://untappd.com/beer/{{.Checkout.GetContribution.GetBeer.UntappdID}}" target=_blank>{{.Checkout.GetContribution.GetBeer.Name}}</a> <small><i>/ {{.Checkout.GetContribution.GetBeer.Brewery}}</i></small>
+                  </div>
+              {{end}}
+          </div>
+          {{ end}}{{ end}}</div>
+  </td></tr>
 {{end}}
 </tbody>
 </table>

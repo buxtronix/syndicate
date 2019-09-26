@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS beers(
   untappdid INTEGER,
   untappdrating INTEGER,
   breweryid INTEGER,
-  labelURL string
+  labelURL TEXT
 );
 CREATE TABLE IF NOT EXISTS contributions(
   id INTEGER PRIMARY KEY,
