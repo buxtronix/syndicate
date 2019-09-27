@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"time"
@@ -112,12 +113,14 @@ func beersHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return listTmpl.Execute(w, r, bf)
 }
 
+var untappdRE = regexp.MustCompile("([0-9]+)$")
+
 // addBeerHandler handles adding beer.
 func addBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 	var uti int64
 	var err error
 	if fv := r.FormValue("untappdid"); fv != "" {
-		uti, err = strconv.ParseInt(fv, 10, 64)
+		uti, err = strconv.ParseInt(untappdRE.FindString(fv), 10, 64)
 		if err != nil {
 			return appErrorf(err, "UntappdID must be a number: %v", err)
 		}
@@ -159,7 +162,7 @@ func untappdBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 	var uti int64
 	var err error
 	if fv := r.FormValue("id"); fv != "" {
-		uti, err = strconv.ParseInt(fv, 10, 64)
+		uti, err = strconv.ParseInt(untappdRE.FindString(fv), 10, 64)
 		if err != nil {
 			w.Write([]byte("not a valid beer id"))
 			return nil
