@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS contributions(
   beer INTEGER,
   quantity INTEGER,
   date INTEGER,
-  unitprice INTEGER
+  unitprice INTEGER,
+  comment TEXT
 );
 CREATE TABLE IF NOT EXISTS checkouts(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -256,8 +257,9 @@ func scanContributions(s rowScanner) (*Contribution, error) {
 		quantity  sql.NullInt64
 		date      sql.NullInt64
 		unitPrice sql.NullInt64
+		comment   sql.NullString
 	)
-	if err := s.Scan(&id, &user, &beer, &quantity, &date, &unitPrice); err != nil {
+	if err := s.Scan(&id, &user, &beer, &quantity, &date, &unitPrice, &comment); err != nil {
 		return nil, err
 	}
 	cont := &Contribution{
@@ -267,6 +269,7 @@ func scanContributions(s rowScanner) (*Contribution, error) {
 		Quantity:  quantity.Int64,
 		Date:      time.Unix(date.Int64, 0),
 		UnitPrice: float64(unitPrice.Int64) / 100,
+		Comment:   comment.String,
 	}
 	return cont, nil
 }
@@ -292,12 +295,12 @@ func (d *database) ListContributions() ([]*Contribution, error) {
 
 const addContributionStmt = `
 INSERT INTO contributions(
-  user, beer, quantity, date, unitprice
-  ) VALUES (?, ?, ?, ?, ?)`
+  user, beer, quantity, date, unitprice, comment
+  ) VALUES (?, ?, ?, ?, ?, ?)`
 
 // AddContribution adds a new contribution.
 func (d *database) AddContribution(c *Contribution) (int64, error) {
-	r, err := execAffectingOneRow(d.addContribution, c.User, c.Beer, c.Quantity, c.Date.Unix(), int64(c.UnitPrice*100))
+	r, err := execAffectingOneRow(d.addContribution, c.User, c.Beer, c.Quantity, c.Date.Unix(), int64(c.UnitPrice*100), c.Comment)
 	if err != nil {
 		return 0, err
 	}
@@ -309,12 +312,12 @@ func (d *database) AddContribution(c *Contribution) (int64, error) {
 }
 
 const editContributionStmt = `
-UPDATE contributions SET quantity=?, unitprice=?
+UPDATE contributions SET quantity=?, unitprice=?, comment=?
 WHERE id=?`
 
 // EditContribution edits a contribution.
 func (d *database) EditContribution(c *Contribution) error {
-	_, err := execAffectingOneRow(d.editContribution, c.Quantity, int64(c.UnitPrice*100), c.ID)
+	_, err := execAffectingOneRow(d.editContribution, c.Quantity, int64(c.UnitPrice*100), c.Comment, c.ID)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@
    </div>
    <div class="modal-body">
     <form method="post" enctype="multipart/form-data" action="/contribute">
-     <div class="form-group">
+     <div class="form-group bg-light">
       <label for="user">User</label>
       <select class="custom-select" name="userid">
        <option selected value="0">Select user</option>
@@ -18,11 +18,11 @@
 {{end}}
       </select>
      </div>
-     <div class="form-group">
+     <div class="form-group bg-light">
       <label for="quantity">Quantity</label>
-      <input class="form-control" name="quantity" id="quantity" required>
+      <input class="form-control" name="quantity" id="quantity" type="number" required>
      </div>
-     <div class="form-row">
+     <div class="form-row bg-light">
       <div class="col">
        <label for="unitprice">Unit Price</label>
        <div class="input-group">
@@ -42,6 +42,11 @@
 	    <input class="form-control" name="totalprice" id="totalprice">
 	   </div>
 	  </div>
+     </div>
+     <br/>
+     <div class="form-group bg-light">
+      <label for="comment">Comment</label>
+      <input class="form-control" name="comment" id="comment">
      </div>
     </div>
     <div class="modal-footer">

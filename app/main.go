@@ -198,10 +198,11 @@ func editContributeHandler(w http.ResponseWriter, r *http.Request) *appError {
 	}
 	cont.Quantity = int64(quantity)
 	cont.UnitPrice = unitPrice
+	cont.Comment = r.FormValue("comment")
 	if err := syndicate.DB.EditContribution(cont); err != nil {
 		return appErrorf(err, "could not edit contribution: %v", err)
 	}
-	http.Redirect(w, r, fmt.Sprintf("/checkout/detail/%d", id), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", id), http.StatusFound)
 	return nil
 }
 
@@ -256,6 +257,7 @@ func addContributeHandler(w http.ResponseWriter, r *http.Request) *appError {
 		Quantity:  int64(quantity),
 		UnitPrice: unitPrice,
 		Date:      time.Now(),
+		Comment:   r.FormValue("comment"),
 	}
 	_, err = syndicate.DB.AddContribution(cont)
 	if err != nil {

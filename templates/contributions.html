@@ -26,7 +26,8 @@
 		  <i><small><a href="https://untappd.com/brewery/{{.GetBeer.BreweryID}}">{{.GetBeer.Brewery}}</a></small></i>
       <div>
 		<a href="https://untappd.com/beer/{{.GetBeer.UntappdID}}">
-		<img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.GetBeer.RatingWidth}}px,27px,0px);" title="{{.GetBeer.UntappdRating}}"></a>
+        <img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.GetBeer.RatingWidth}}px,27px,0px);" title="{{.GetBeer.UntappdRating}}"></a><br/>
+        {{ if .Comment }}<span class="text-muted"><small>Comment: <i>{{.Comment}}</i></small></span>{{ end }}
 	  </div>
 	  </td>
       <td><b>{{.Quantity}}</b>&nbsp;by&nbsp;{{.GetUser.Name}}<br/><i><small>on {{.Date.Format "2 Jan '06"}}</small></i></td>

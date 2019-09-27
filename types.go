@@ -174,6 +174,8 @@ type Contribution struct {
 	Date time.Time
 	// UnitPrice is the unit price of the beers.
 	UnitPrice float64
+	// Comment is a freeform comment for the contribution.
+	Comment string
 }
 
 // GetBeer gets the beer associated with a contribution.

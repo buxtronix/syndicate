@@ -4,7 +4,7 @@
  <div class="card-header">
   <h5 class="float-left">Contribution detail</h5>
   <div class="float-right">
-	<button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addContModal"  data-beerid="{{.Contribution.GetBeer.ID}}" data-beername="{{.Contribution.GetBeer.Name}}" data.brewer="{{.Contribution.GetBeer.Brewery}}">
+	<button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addContModal"  data-beerid="{{.Contribution.GetBeer.ID}}" data-beername="{{.Contribution.GetBeer.Name}}" data-brewer="{{.Contribution.GetBeer.Brewery}}">
   Contribute
 	</button>
   </div>
@@ -26,6 +26,7 @@
     <tr><th scope="col">Person</th><td>{{.Contribution.GetUser.Name}}</td></tr>
     <tr><th scope="col">Quantity</th><td>{{.Contribution.Quantity}} <i>({{.Contribution.Remaining}} left)</i></td></tr>
     <tr><th scope="col">Unit Price</th><td>{{printf "$%.2f" .Contribution.UnitPrice}}</td></tr>
+    <tr><th scope="col">Comment</th><td class="text-muted"><i>{{.Contribution.Comment}}</i></td></tr>
     </tbody>
   </table>
   <div class="float-right">
@@ -133,11 +134,11 @@
    </div>
    <div class="modal-body">
     <form method="post" enctype="multipart/form-data" action="/contribute/edit/{{.Contribution.ID}}">
-     <div class="form-group">
+     <div class="form-group bg-light">
       <label for="quantity">Quantity</label>
       <input class="form-control" name="quantity" id="quantity" value="{{.Contribution.Quantity}}">
      </div>
-     <div class="form-row">
+     <div class="form-row bg-light">
 	  <div class="col">
 	   <label for="unitprice">Unit Price</label>
 	   <div class="input-group">
@@ -147,6 +148,11 @@
 	    <input class="form-control" name="unitprice" id="unitprice" value="{{.Contribution.UnitPrice}}">
 	   </div>
 	  </div>
+     </div>
+     <br/>
+     <div class="form-group bg-light">
+      <label for="comment">Comment</label>
+      <input class="form-control" name="comment" id="comment" value="{{.Contribution.Comment}}">
      </div>
     </div>
     <div class="modal-footer">
