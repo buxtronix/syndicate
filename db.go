@@ -182,7 +182,7 @@ func (d *database) AddUser(u *User) (int64, error) {
 	return lastInsertID, nil
 }
 
-const listBeersStmt = `SELECT * FROM beers ORDER BY brewery`
+const listBeersStmt = `SELECT * FROM beers ORDER BY id desc`
 
 func scanBeers(s rowScanner) (*Beer, error) {
 	var (
