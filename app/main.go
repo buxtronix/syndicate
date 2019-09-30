@@ -70,9 +70,9 @@ func registerHandlers() {
 
 	r.Methods("GET").Path("/contribute/detail/{id:.+}").
 		Handler(appHandler(getContributeDetailHandler))
-	r.Methods("POST").Path("/contribute/delete/{id:.}").
+	r.Methods("POST").Path("/contribute/delete/{id:.+}").
 		Handler(appHandler(deleteContributeHandler))
-	r.Methods("POST").Path("/contribute/edit/{id:.}").
+	r.Methods("POST").Path("/contribute/edit/{id:.+}").
 		Handler(appHandler(editContributeHandler))
 	r.Methods("POST").Path("/contribute").
 		Handler(appHandler(addContributeHandler))
