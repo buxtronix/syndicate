@@ -38,7 +38,7 @@
   Contribute
 	</button>
 	<br/>
-	<button class="btn btn-info btn-sm" {{if lt .GetBeer.Available 1}}disabled{{end}} data-toggle="modal" data-target="#takeContModal" data-contid="{{.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}">
+    <button class="btn btn-info btn-sm" {{if lt .GetBeer.Available 1}}disabled{{end}} data-toggle="modal" data-target="#takeContModal" data-contid="{{.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}" data-comment="{{.Comment}}">
   Checkout
 	</button>
       </td>
@@ -61,6 +61,7 @@
      </button>
    </div>
    <div class="modal-body">
+   <div class="modal-comment text-center"></div>
 <form method="post" enctype="multipart/form-data" action="/checkout">
   <div class="form-group">
     <label for="user">User</label>

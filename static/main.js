@@ -43,8 +43,10 @@ $('#takeContModal').on('show.bs.modal', function (event) {
   var cid = button.data('contid')
   var bname = button.data('beername')
   var bbrewer = button.data('brewer')
+  var comment = button.data('comment')
   var modal = $(this)
   modal.find('.modal-title').text('Checkout ' + bbrewer + ' ' + bname)
+  modal.find('.modal-comment').html('<small><i>' + comment + '</i></small>')
   $("input[name=contid]").val(cid);
   $("input[name=quantity]").val("");
 })
