@@ -136,7 +136,7 @@
     <form method="post" enctype="multipart/form-data" action="/contribute/edit/{{.Contribution.ID}}">
      <div class="form-group bg-light">
       <label for="quantity">Quantity</label>
-      <input class="form-control" name="quantity" id="quantity" value="{{.Contribution.Quantity}}" autocomplete=false>
+      <input class="form-control" name="quantity" id="quantity" value="{{.Contribution.Quantity}}" autocomplete="off">
      </div>
      <div class="form-row bg-light">
 	  <div class="col">
@@ -145,14 +145,14 @@
 	    <div class="input-group-prepend">
 		    <span class="input-group-text">$</span>
 	    </div>
-	    <input class="form-control" name="unitprice" id="unitprice" value="{{.Contribution.UnitPrice}}" autocomplete=false>
+	    <input class="form-control" name="unitprice" id="unitprice" value="{{.Contribution.UnitPrice}}" autocomplete="off">
 	   </div>
 	  </div>
      </div>
      <br/>
      <div class="form-group bg-light">
       <label for="comment">Comment</label>
-      <input class="form-control" name="comment" id="comment" value="{{.Contribution.Comment}}" autocomplete=false>
+      <input class="form-control" name="comment" id="comment" value="{{.Contribution.Comment}}" autocomplete="off">
      </div>
     </div>
     <div class="modal-footer">

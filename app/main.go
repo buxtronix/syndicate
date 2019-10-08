@@ -311,7 +311,7 @@ func getCheckoutDeleteHandler(w http.ResponseWriter, r *http.Request) *appError 
 	if err := syndicate.DB.DeleteCheckout(id); err != nil {
 		return appErrorf(err, "error removing checkout: %v", err)
 	}
-	http.Redirect(w, r, fmt.Sprintf("/checkout/detail/%d", contid), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", contid), http.StatusFound)
 	return nil
 }
 
@@ -359,10 +359,24 @@ func addCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "error fetching contribution id %d: %v", contID, err)
 	}
 
-	userID, err := strconv.Atoi(r.FormValue("userid"))
+	userID, err := strconv.ParseInt(r.FormValue("userid"), 10, 64)
 	if err != nil {
 		return appErrorf(err, "error parsing user id: %v", err)
 	}
+	users, err := syndicate.DB.ListUsers()
+	if err != nil {
+		return appErrorf(err, "error fetching user list: %v", err)
+	}
+	foundUser := false
+	for _, u := range users {
+		if u.ID == userID {
+			foundUser = true
+		}
+	}
+	if !foundUser {
+		return appErrorf(err, "Unknown user id: %d: %v", userID, err)
+	}
+
 	quantity, err := strconv.ParseInt(r.FormValue("quantity"), 10, 64)
 	if err != nil {
 		return appErrorf(err, "error parsing quantity id: %v", err)
