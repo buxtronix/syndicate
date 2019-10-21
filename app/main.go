@@ -262,11 +262,11 @@ func addContributeHandler(w http.ResponseWriter, r *http.Request) *appError {
 		Date:      time.Now(),
 		Comment:   r.FormValue("comment"),
 	}
-	_, err = syndicate.DB.AddContribution(cont)
+	id, err := syndicate.DB.AddContribution(cont)
 	if err != nil {
 		return appErrorf(err, "error adding contribution: %v", err)
 	}
-	http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", id), http.StatusFound)
 	return nil
 }
 
@@ -399,7 +399,11 @@ func addCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 	if err != nil {
 		return appErrorf(err, "error adding checkout: %v", err)
 	}
-	http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
+	if ret, _ := strconv.ParseInt(r.FormValue("return"), 10, 64); ret > 0 {
+		http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", ret), http.StatusFound)
+	} else {
+		http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
+	}
 	return nil
 }
 
