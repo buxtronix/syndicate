@@ -83,3 +83,129 @@ $("#untappdid").keyup(function() {
 	  }
   }, 1000);
   });
+
+const applicationServerPublicKey = 'BHVIXApfzS25EkHw0YvpE9rHK31lL57eEyZlFGDlaca7A8LYF9hsqZh8GyB1MBq1CCx8VzeHbjjj6RN9KYo9jSU';
+
+var isSubscribed = false;
+
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+      console.log('Service Worker and Push is supported');
+
+      navigator.serviceWorker.register('static/sw.js')
+      .then(function(swReg) {
+              console.log('Service Worker is registered', swReg);
+
+              swRegistration = swReg;
+              initializeUI();
+            })
+      .catch(function(error) {
+              console.error('Service Worker Error', error);
+            });
+} else {
+      console.warn('Push messaging is not supported');
+      $('#notifyBtn').text('Push Not Supported');
+}
+
+function initializeUI() {
+    $('#notifyBtn').click(function(){
+        $('#notifyBtn').attr('disabled', true);
+        if (isSubscribed) {
+            unsubscribeUser();
+        } else {
+            subscribeUser();
+        }
+    });
+    swRegistration.pushManager.getSubscription()
+    .then(function(subscription) {
+        isSubscribed = !(subscription === null);
+
+        if (isSubscribed) {
+            console.log('User is subscribed');
+        } else {
+            console.log('User not subscribed');
+        }
+    });
+    updateBtn();
+}
+
+
+function updateBtn() {
+    if (Notification.permission === 'denied') {
+        $('#notifyBtn').text('Push blocked');
+        $('#notifyBtn').attr('disabled', true);
+        updateSubscriptionOnServer(null);
+        return;
+    }
+
+    if (isSubscribed) {
+        $('#notifyBtn').text('Disable push');
+    } else {
+        $('#notifyBtn').text('Enable push');
+    }
+    $('#notifyBtn').attr('disabled', false);
+}
+
+/**
+ * urlBase64ToUint8Array
+ * 
+* @param {string} base64String a public vavid key
+*/
+function urlBase64ToUint8Array(base64String) {
+        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+        var base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/');
+
+        var rawData = window.atob(base64);
+        var outputArray = new Uint8Array(rawData.length);
+
+        for (var i = 0; i < rawData.length; ++i) {
+                    outputArray[i] = rawData.charCodeAt(i);
+                }
+        return outputArray;
+}
+
+function subscribeUser() {
+    const applicationServerKey = urlBase64ToUint8Array(applicationServerPublicKey);
+
+    swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey
+    })
+    .then(function(subscription) {
+        console.log('User subscribed');
+
+        updateSubscriptionOnServer(subscription);
+        isSubscribed = true;
+        updateBtn();
+    })
+    .catch(function(err) {
+        console.log('Failed to subscribe: ', err);
+        updateBtn();
+    });
+}
+
+function updateSubscriptionOnServer(subscription) {
+
+    console.log(JSON.stringify(subscription));
+}
+
+function unsubscribeUser() {
+      swRegistration.pushManager.getSubscription()
+      .then(function(subscription) {
+              if (subscription) {
+                        return subscription.unsubscribe();
+                      }
+            })
+      .catch(function(error) {
+              console.log('Error unsubscribing', error);
+            })
+      .then(function() {
+              updateSubscriptionOnServer(null);
+
+              console.log('User is unsubscribed.');
+              isSubscribed = false;
+
+              updateBtn();
+       });
+}
