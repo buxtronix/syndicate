@@ -128,8 +128,13 @@ function initializeUI() {
     updateBtn();
 }
 
-
 function updateBtn() {
+    if (isSubscribed) {
+        $('#notifyBtn').text('Disable push');
+    } else {
+        $('#notifyBtn').text('Enable push');
+    }
+    $('#notifyBtn').attr('disabled', false);
     if (Notification.permission === 'denied') {
         $('#notifyBtn').text('Push blocked');
         $('#notifyBtn').attr('disabled', true);
@@ -137,12 +142,6 @@ function updateBtn() {
         return;
     }
 
-    if (isSubscribed) {
-        $('#notifyBtn').text('Disable push');
-    } else {
-        $('#notifyBtn').text('Enable push');
-    }
-    $('#notifyBtn').attr('disabled', false);
 }
 
 /**
@@ -173,9 +172,8 @@ function subscribeUser() {
         applicationServerKey: applicationServerKey
     })
     .then(function(subscription) {
+        updateSubscriptionOnServer(subscription, true);
         console.log('User subscribed');
-
-        updateSubscriptionOnServer(subscription);
         isSubscribed = true;
         updateBtn();
     })
@@ -185,15 +183,33 @@ function subscribeUser() {
     });
 }
 
-function updateSubscriptionOnServer(subscription) {
-
+function updateSubscriptionOnServer(subscription, enable) {
     console.log(JSON.stringify(subscription));
+    var encodedKey = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh'))));
+    var encodedAuth = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth'))));
+    var url = enable ? '/subscribe' : '/unsubscribe';
+    $.ajax({
+        type: 'POST',
+        url: url,
+        data:{
+            endpoint: subscription.endpoint,
+            key: encodedKey,
+            auth: encodedAuth,
+        },
+        success: function(response) {
+            console.log('Subsribed on server!');
+        },
+        dataType: 'json'
+    }
+    );
 }
 
 function unsubscribeUser() {
       swRegistration.pushManager.getSubscription()
       .then(function(subscription) {
               if (subscription) {
+                        updateSubscriptionOnServer(subscription, false);
+                        console.log("Unsub: " + JSON.stringify(subscription));
                         return subscription.unsubscribe();
                       }
             })
@@ -201,7 +217,6 @@ function unsubscribeUser() {
               console.log('Error unsubscribing', error);
             })
       .then(function() {
-              updateSubscriptionOnServer(null);
 
               console.log('User is unsubscribed.');
               isSubscribed = false;

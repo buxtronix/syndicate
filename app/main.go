@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/buxtronix/syndicate"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -29,6 +30,9 @@ var (
 	dbFile        = flag.String("dbfile", "beer.db", "SQLite database file")
 	untappdID     = flag.String("untappd_id", "", "Client ID for Untappd API")
 	untappdSecret = flag.String("untappd_secret", "", "Secret for Untappd API")
+
+	vapidPublic  = flag.String("vapid_public", "", "VAPID public key")
+	vapidPrivate = flag.String("vapid_private", "", "VAPID private key")
 )
 
 func main() {
@@ -86,6 +90,11 @@ func registerHandlers() {
 		Handler(appHandler(activityHandler))
 
 	r.Methods("POST").Path("/untappd/beer").Handler(appHandler(untappdBeerHandler))
+
+	r.Methods("POST").Path("/subscribe").
+		Handler(appHandler(addSubHandler))
+	r.Methods("POST").Path("/unsubscribe").
+		Handler(appHandler(delSubHandler))
 
 	r.Methods("GET").Path("/static/{path:.+}").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	http.Handle("/", handlers.CombinedLoggingHandler(os.Stderr, r))
@@ -267,6 +276,7 @@ func addContributeHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "error adding contribution: %v", err)
 	}
 	http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
+	go sendAllSubscribers("Someone added beer!")
 	return nil
 }
 
@@ -491,6 +501,86 @@ func userAddHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "error adding new user %s: %v", err)
 	}
 	http.Redirect(w, r, fmt.Sprintf("/users"), http.StatusFound)
+	return nil
+}
+
+func addSubHandler(w http.ResponseWriter, r *http.Request) *appError {
+	endPoint := r.FormValue("endpoint")
+	key := r.FormValue("key")
+	auth := r.FormValue("auth")
+
+	switch {
+	case endPoint == "":
+		return &appError{Error: nil, Message: "missing endpoint"}
+	case key == "":
+		return &appError{Error: nil, Message: "missing key"}
+	case auth == "":
+		return &appError{Error: nil, Message: "missing auth"}
+	}
+
+	sub := &syndicate.Subscription{
+		Endpoint: endPoint,
+		Key:      key,
+		Auth:     auth,
+	}
+	if _, err := syndicate.DB.AddSubscription(sub); err != nil {
+		return appErrorf(err, "error adding subscription: %v", err)
+	}
+	return nil
+}
+
+func delSubHandler(w http.ResponseWriter, r *http.Request) *appError {
+	endPoint := r.FormValue("endpoint")
+	key := r.FormValue("key")
+	auth := r.FormValue("auth")
+
+	switch {
+	case endPoint == "":
+		return &appError{Error: nil, Message: "missing endpoint"}
+	case key == "":
+		return &appError{Error: nil, Message: "missing key"}
+	case auth == "":
+		return &appError{Error: nil, Message: "missing auth"}
+	}
+
+	subs, err := syndicate.DB.ListSubscriptions()
+	if err != nil {
+		return appErrorf(err, "Error listing subscriptions: %v", err)
+	}
+
+	for _, sub := range subs {
+		if sub.Endpoint == endPoint {
+			if err := syndicate.DB.DeleteSubscription(sub.ID); err != nil {
+				return appErrorf(err, "Error removing subscription: %v", err)
+			}
+			return nil
+		}
+	}
+
+	return &appError{Error: nil, Message: "subscription not found"}
+}
+
+func sendAllSubscribers(message string) error {
+	subs, err := syndicate.DB.ListSubscriptions()
+	if err != nil {
+		return err
+	}
+	for _, sub := range subs {
+		s := &webpush.Subscription{
+			Endpoint: sub.Endpoint,
+			Keys: webpush.Keys{
+				Auth:   sub.Auth,
+				P256dh: sub.Key,
+			},
+		}
+		if _, err := webpush.SendNotification([]byte(message), s, &webpush.Options{
+			TTL:             20 * 60 * 60,
+			VAPIDPublicKey:  *vapidPublic,
+			VAPIDPrivateKey: *vapidPrivate,
+		}); err != nil {
+			log.Printf("Error sending notification: %v", err)
+		}
+	}
 	return nil
 }
 

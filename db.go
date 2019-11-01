@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS checkouts(
   quantity INTEGER,
   date INTEGER
 );
+CREATE TABLE IF NOT EXISTS subscriptions(
+  id INTEGER PRIMARY KEY,
+  endpoint TEXT,
+  key TEXT,
+  auth TEXT
+);
 `
 
 type database struct {
@@ -56,6 +62,10 @@ type database struct {
 	listCheckouts     *sql.Stmt
 	addCheckout       *sql.Stmt
 	delCheckout       *sql.Stmt
+
+	listSubscriptions *sql.Stmt
+	addSubscription   *sql.Stmt
+	delSubscription   *sql.Stmt
 }
 
 var _ BeerDatabase = &database{}
@@ -101,6 +111,16 @@ func (d *database) Open(path string) error {
 	}
 	if d.delCheckout, err = db.Prepare(delCheckoutStmt); err != nil {
 		return fmt.Errorf("sql: prepare delCheckout: %v", err)
+	}
+
+	if d.listSubscriptions, err = db.Prepare(listSubscriptionsStmt); err != nil {
+		return fmt.Errorf("sql: prepare listSubscription: %v", err)
+	}
+	if d.addSubscription, err = db.Prepare(addSubscriptionStmt); err != nil {
+		return fmt.Errorf("sql: prepare addSubscription: %v", err)
+	}
+	if d.delSubscription, err = db.Prepare(delSubscriptionStmt); err != nil {
+		return fmt.Errorf("sql: prepare delSubscription: %v", err)
 	}
 	return nil
 }
@@ -406,6 +426,69 @@ func (d *database) DeleteCheckout(id int64) error {
 		return err
 	}
 	return nil
+}
+
+const listSubscriptionsStmt = `SELECT * FROM subscriptions`
+
+func scanSubs(s rowScanner) (*Subscription, error) {
+	var (
+		id       int64
+		endpoint sql.NullString
+		key      sql.NullString
+		auth     sql.NullString
+	)
+	if err := s.Scan(&id, &endpoint, &key, &auth); err != nil {
+		return nil, err
+	}
+	sub := &Subscription{
+		ID:       id,
+		Endpoint: endpoint.String,
+		Key:      key.String,
+		Auth:     auth.String,
+	}
+	return sub, nil
+}
+
+func (d *database) ListSubscriptions() ([]*Subscription, error) {
+	rows, err := d.listSubscriptions.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var subs []*Subscription
+	for rows.Next() {
+		sub, err := scanSubs(rows)
+		if err != nil {
+			return nil, fmt.Errorf("sql: could not read row: %v", err)
+		}
+		subs = append(subs, sub)
+	}
+	return subs, nil
+}
+
+const addSubscriptionStmt = `
+INSERT INTO subscriptions (
+endpoint, key, auth) VALUES (?, ?, ?)`
+
+func (d *database) AddSubscription(s *Subscription) (int64, error) {
+	r, err := execAffectingOneRow(d.addSubscription, s.Endpoint, s.Key, s.Auth)
+	if err != nil {
+		return 0, nil
+	}
+	lastInsertID, err := r.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("sql: could not get last insert id: %v", err)
+	}
+	return lastInsertID, nil
+}
+
+const delSubscriptionStmt = `
+DELETE FROM subscriptions WHERE id = ?`
+
+func (d *database) DeleteSubscription(id int64) error {
+	_, err := execAffectingOneRow(d.delSubscription, id)
+	return err
 }
 
 // execAffectingOneRow executes a given statement, expecting one row to be affected.

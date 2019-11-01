@@ -269,6 +269,18 @@ func (c *Checkout) GetContribution() (*Contribution, error) {
 	return GetContribution(c.Contribution)
 }
 
+// Subscription is a web push subscription.
+type Subscription struct {
+	// ID is the ID of the subscription.
+	ID int64
+	// Endpoint is the web push endpoint.
+	Endpoint string
+	// Key is the push key field.
+	Key string
+	// Auth is the push auth field.
+	Auth string
+}
+
 // DB is the database handler.
 var DB BeerDatabase
 
@@ -309,4 +321,11 @@ type BeerDatabase interface {
 	AddCheckout(*Checkout) (id int64, err error)
 	// DeleteCheckout deletes a checkout.
 	DeleteCheckout(int64) error
+
+	// ListSubscriptions lists all subscriptions.
+	ListSubscriptions() ([]*Subscription, error)
+	// AddSubscription adds a new subscription
+	AddSubscription(*Subscription) (id int64, err error)
+	// DeleteSubscription removes a subscription.
+	DeleteSubscription(int64) error
 }
