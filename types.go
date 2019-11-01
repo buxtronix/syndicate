@@ -57,6 +57,21 @@ func (u *User) TotalTaken() (float64, error) {
 	return total, nil
 }
 
+// TotalDebitCredit returns the total debits/credits for the user.
+func (u *User) TotalDebitCredit() (float64, error) {
+	dcs, err := DB.ListDebitCredits()
+	if err != nil {
+		return 0, err
+	}
+	var total float64
+	for _, dc := range dcs {
+		if dc.User == u.ID {
+			total += dc.Amount
+		}
+	}
+	return total, nil
+}
+
 // NetPosition returns the users's net financial position in the syndicate.
 func (u *User) NetPosition() (float64, error) {
 	added, err := u.TotalAdded()
@@ -67,7 +82,11 @@ func (u *User) NetPosition() (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return added - taken + u.SeedFund, nil
+	dc, err := u.TotalDebitCredit()
+	if err != nil {
+		return 0, err
+	}
+	return added - taken + u.SeedFund + dc, nil
 }
 
 // LastCheckins returns the users last 'count' checkins on Untappd.
@@ -269,6 +288,34 @@ func (c *Checkout) GetContribution() (*Contribution, error) {
 	return GetContribution(c.Contribution)
 }
 
+// DebitCredit represents a misc non-beer debit or credit for a user.
+type DebitCredit struct {
+	// ID is the ID of the DebitCredit.
+	ID int64
+	// User is the user to whom this applies.
+	User int64
+	// Amount is the amount of debit or credit, in cents.
+	Amount float64
+	// Date is the date the debit or credit was applied.
+	Date time.Time
+	// Comment is a freeform comment or description of the debit or credit.
+	Comment string
+}
+
+// GetUser gets the user associated with a contribution.
+func (dc *DebitCredit) GetUser() (*User, error) {
+	users, err := DB.ListUsers()
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range users {
+		if u.ID == dc.User {
+			return u, nil
+		}
+	}
+	return nil, fmt.Errorf("did not find user with id %d", dc.User)
+}
+
 // DB is the database handler.
 var DB BeerDatabase
 
@@ -309,4 +356,11 @@ type BeerDatabase interface {
 	AddCheckout(*Checkout) (id int64, err error)
 	// DeleteCheckout deletes a checkout.
 	DeleteCheckout(int64) error
+
+	// ListDebitCredits lists all debits or credits.
+	ListDebitCredits() ([]*DebitCredit, error)
+	// AddDebitCredit adds a debit or credit.
+	AddDebitCredit(*DebitCredit) (id int64, err error)
+	// DeleteDebitCredit deletes a debit or credit.
+	DeleteDebitCredit(int64) error
 }

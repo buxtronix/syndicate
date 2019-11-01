@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS checkouts(
   quantity INTEGER,
   date INTEGER
 );
+CREATE TABLE IF NOT EXISTS debitsCredits(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user INTEGER,
+  amount INTEGER,
+  date INTEGER,
+  comment TEXT
+);
 `
 
 type database struct {
@@ -56,6 +63,9 @@ type database struct {
 	listCheckouts     *sql.Stmt
 	addCheckout       *sql.Stmt
 	delCheckout       *sql.Stmt
+	listDebitCredits  *sql.Stmt
+	addDebitCredit    *sql.Stmt
+	delDebitCredit    *sql.Stmt
 }
 
 var _ BeerDatabase = &database{}
@@ -101,6 +111,15 @@ func (d *database) Open(path string) error {
 	}
 	if d.delCheckout, err = db.Prepare(delCheckoutStmt); err != nil {
 		return fmt.Errorf("sql: prepare delCheckout: %v", err)
+	}
+	if d.listDebitCredits, err = db.Prepare(listDebitCreditsStmt); err != nil {
+		return fmt.Errorf("sql: prepare listDebitCredit: %v", err)
+	}
+	if d.addDebitCredit, err = db.Prepare(addDebitCreditStmt); err != nil {
+		return fmt.Errorf("sql: prepare addDebitCredit: %v", err)
+	}
+	if d.delDebitCredit, err = db.Prepare(delDebitCreditStmt); err != nil {
+		return fmt.Errorf("sql: prepare delDebitCredit: %v", err)
 	}
 	return nil
 }
@@ -402,6 +421,79 @@ DELETE FROM checkouts WHERE id = ?`
 // DeleteCheckout removes a checkout.
 func (d *database) DeleteCheckout(id int64) error {
 	_, err := execAffectingOneRow(d.delCheckout, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func scanDebitCredits(s rowScanner) (*DebitCredit, error) {
+	var (
+		id      int64
+		user    sql.NullInt64
+		amount  sql.NullInt64
+		date    sql.NullInt64
+		comment sql.NullString
+	)
+	if err := s.Scan(&id, &user, &amount, &date, &comment); err != nil {
+		return nil, err
+	}
+	dc := &DebitCredit{
+		ID:      id,
+		User:    user.Int64,
+		Amount:  float64(amount.Int64) / 100,
+		Date:    time.Unix(date.Int64, 0),
+		Comment: comment.String,
+	}
+	return dc, nil
+}
+
+const listDebitCreditsStmt = `
+SELECT * FROM debitsCredits`
+
+// ListDebitCredits lists all debits/credits.
+func (d *database) ListDebitCredits() ([]*DebitCredit, error) {
+	rows, err := d.listDebitCredits.Query()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var dcs []*DebitCredit
+	for rows.Next() {
+		dc, err := scanDebitCredits(rows)
+		if err != nil {
+			return nil, fmt.Errorf("sql: could not read row: %v", err)
+		}
+		dcs = append(dcs, dc)
+	}
+	return dcs, nil
+}
+
+const addDebitCreditStmt = `
+INSERT INTO debitsCredits (
+  user, amount, date, comment
+  ) VALUES (?, ?, ?, ?)`
+
+// AddCheckout adds a new checkout.
+func (d *database) AddDebitCredit(dc *DebitCredit) (int64, error) {
+	r, err := execAffectingOneRow(d.addDebitCredit, dc.User, int64(dc.Amount*100), dc.Date.Unix(), dc.Comment)
+	if err != nil {
+		return 0, err
+	}
+	lastInsertID, err := r.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("sql: could not get last insert id: %v", err)
+	}
+	return lastInsertID, nil
+}
+
+const delDebitCreditStmt = `
+DELETE FROM debitsCredits WHERE id = ?`
+
+// DeleteCheckout removes a checkout.
+func (d *database) DeleteDebitCredit(id int64) error {
+	_, err := execAffectingOneRow(d.delDebitCredit, id)
 	if err != nil {
 		return err
 	}

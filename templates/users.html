@@ -18,7 +18,7 @@ td .userDetails[aria-expanded="true"]:before{
     <tr>
       <th>Name</th>
       <th>Untappd link</th>
-      <th>Starting $</th>
+      <th>Credits/Debits</th>
       <th>Contributed</th>
       <th>Taken</th>
       <th>Net Position</th>
@@ -43,12 +43,12 @@ td .userDetails[aria-expanded="true"]:before{
     */}}
     <a href="https://untappd.com/user/{{.UntappdID}}" target=_blank>{{.UntappdID}}</a>
     </td>
-    <td>{{printf "$%.2f" .SeedFund}}</td>
+    <td><a href="/debitcredit/{{.ID}}">{{printf "$%.2f" .TotalDebitCredit}}</a></td>
     <td>{{printf "$%.2f" .TotalAdded}}</td>
     <td>{{printf "$%.2f" .TotalTaken}}</td>
     <td {{if lt .NetPosition 0.0}}class="table-danger"{{end}}>{{printf "$%.2f" .NetPosition}}</td>
   </tr>
-  <tr class="collapse" id="collapse{{$user.Name}}"><td colspan="6" align="center" aria-expanded="false">
+  <tr class="collapse" id="collapse{{$user.Name}}"><td colspan="7" align="center" aria-expanded="false">
           <div class="container">
           {{ range $activity }}{{ if eq .User $user.ID }}
               <div class="row w-75 text-success">
@@ -71,6 +71,17 @@ td .userDetails[aria-expanded="true"]:before{
                   </div>
                   <div class="col-sm text-left">
                  <a href="https://untappd.com/beer/{{.Checkout.GetContribution.GetBeer.UntappdID}}" target=_blank>{{.Checkout.GetContribution.GetBeer.Name}}</a> <small><i>/ {{.Checkout.GetContribution.GetBeer.Brewery}}</i></small>
+                  </div>
+              {{end}}
+              {{ if .DebitCredit }}
+                  <div class="col-sm-3">
+                      <small>{{.Time.Format "2 Jan 2006 15:04" }}</small>
+                  </div>
+                  <div class="col-sm-3 text-right">
+                      misc {{ if lt .DebitCredit.Amount 0.0}}debit{{else}}credit{{end}} of ${{.DebitCredit.Amount}}
+                  </div>
+                  <div class="col-sm text-left">
+                      <i>{{.DebitCredit.Comment}}</i>
                   </div>
               {{end}}
           </div>
