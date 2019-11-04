@@ -18,11 +18,12 @@ import (
 )
 
 var (
-	listTmpl       = parseTemplate("beers.html")
-	usersTmpl      = parseTemplate("users.html")
-	contributeTmpl = parseTemplate("contributions.html")
-	contDetailTmpl = parseTemplate("contDetail.html")
-	activityTmpl   = parseTemplate("activity.html")
+	listTmpl        = parseTemplate("beers.html")
+	usersTmpl       = parseTemplate("users.html")
+	contributeTmpl  = parseTemplate("contributions.html")
+	contDetailTmpl  = parseTemplate("contDetail.html")
+	activityTmpl    = parseTemplate("activity.html")
+	debitCreditTmpl = parseTemplate("debitCredit.html")
 )
 
 var (
@@ -85,6 +86,11 @@ func registerHandlers() {
 		Handler(appHandler(usersHandler))
 	r.Methods("POST").Path("/users/add").
 		Handler(appHandler(userAddHandler))
+
+	r.Methods("GET").Path("/debitcredit/{id:.+}").
+		Handler(appHandler(userDebitCreditHandler))
+	r.Methods("POST").Path("/debitcredit/add").
+		Handler(appHandler(userDebitCreditAddHandler))
 
 	r.Methods("GET").Path("/activity").
 		Handler(appHandler(activityHandler))
@@ -271,11 +277,11 @@ func addContributeHandler(w http.ResponseWriter, r *http.Request) *appError {
 		Date:      time.Now(),
 		Comment:   r.FormValue("comment"),
 	}
-	_, err = syndicate.DB.AddContribution(cont)
+	id, err := syndicate.DB.AddContribution(cont)
 	if err != nil {
 		return appErrorf(err, "error adding contribution: %v", err)
 	}
-	http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", id), http.StatusFound)
 	go sendAllSubscribers("Someone added beer!")
 	return nil
 }
@@ -409,7 +415,11 @@ func addCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 	if err != nil {
 		return appErrorf(err, "error adding checkout: %v", err)
 	}
-	http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
+	if ret, _ := strconv.ParseInt(r.FormValue("return"), 10, 64); ret > 0 {
+		http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", ret), http.StatusFound)
+	} else {
+		http.Redirect(w, r, fmt.Sprintf("/checkout"), http.StatusFound)
+	}
 	return nil
 }
 
@@ -423,10 +433,11 @@ func activityHandler(w http.ResponseWriter, r *http.Request) *appError {
 }
 
 type oneActivity struct {
-	User     int64
-	Contrib  *syndicate.Contribution
-	Checkout *syndicate.Checkout
-	Time     time.Time
+	User        int64
+	Contrib     *syndicate.Contribution
+	Checkout    *syndicate.Checkout
+	DebitCredit *syndicate.DebitCredit
+	Time        time.Time
 }
 
 func getActivity() ([]*oneActivity, error) {
@@ -437,6 +448,10 @@ func getActivity() ([]*oneActivity, error) {
 	checkouts, err := syndicate.DB.ListCheckouts()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch checkout list: %v", err)
+	}
+	debitsCredits, err := syndicate.DB.ListDebitCredits()
+	if err != nil {
+		return nil, fmt.Errorf("coult not fetch debitcredit list: %v", err)
 	}
 	activity := []*oneActivity{}
 	for _, c := range contribs {
@@ -451,6 +466,13 @@ func getActivity() ([]*oneActivity, error) {
 			User:     c.User,
 			Checkout: c,
 			Time:     c.Date,
+		})
+	}
+	for _, dc := range debitsCredits {
+		activity = append(activity, &oneActivity{
+			User:        dc.User,
+			DebitCredit: dc,
+			Time:        dc.Date,
 		})
 	}
 	sort.Slice(activity, func(i, j int) bool {
@@ -581,6 +603,86 @@ func sendAllSubscribers(message string) error {
 			log.Printf("Error sending notification: %v", err)
 		}
 	}
+	return nil
+}
+
+func userDebitCreditHandler(w http.ResponseWriter, r *http.Request) *appError {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		return appErrorf(err, "could not parse id: %v", err)
+	}
+	var user *syndicate.User
+	users, err := syndicate.DB.ListUsers()
+	if err != nil {
+		return appErrorf(err, "error querying users from DB: %v", err)
+	}
+	for _, u := range users {
+		if u.ID == id {
+			user = u
+			break
+		}
+	}
+	if user == nil {
+		return &appError{Error: nil, Message: "invalid user"}
+	}
+
+	dcs, err := syndicate.DB.ListDebitCredits()
+	if err != nil {
+		return appErrorf(err, "error querying credits/debits: %v", err)
+	}
+	data := struct {
+		User *syndicate.User
+		Dcs  []*syndicate.DebitCredit
+	}{
+		User: user,
+		Dcs:  []*syndicate.DebitCredit{},
+	}
+	for _, dc := range dcs {
+		if dc.User == id {
+			data.Dcs = append(data.Dcs, dc)
+		}
+	}
+	return debitCreditTmpl.Execute(w, r, data)
+}
+
+func userDebitCreditAddHandler(w http.ResponseWriter, r *http.Request) *appError {
+	userID, err := strconv.ParseInt(r.FormValue("userid"), 10, 64)
+	if err != nil {
+		return appErrorf(err, "error parsing user id: %v", err)
+	}
+	users, err := syndicate.DB.ListUsers()
+	if err != nil {
+		return appErrorf(err, "error fetching user list: %v", err)
+	}
+	foundUser := false
+	for _, u := range users {
+		if u.ID == userID {
+			foundUser = true
+		}
+	}
+	if !foundUser {
+		return appErrorf(err, "Unknown user id: %d: %v", userID, err)
+	}
+
+	amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
+	if err != nil {
+		return appErrorf(err, "invalid amount: %v", err)
+	}
+	if r.FormValue("typeDebit") == "on" {
+		amount *= -1
+	}
+
+	_, err = syndicate.DB.AddDebitCredit(&syndicate.DebitCredit{
+		User:    userID,
+		Amount:  amount,
+		Comment: r.FormValue("comment"),
+		Date:    time.Now(),
+	})
+	if err != nil {
+		return appErrorf(err, "error adding to db: %v", err)
+	}
+	http.Redirect(w, r, fmt.Sprintf("/debitcredit/%d", userID), http.StatusFound)
 	return nil
 }
 

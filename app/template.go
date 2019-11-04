@@ -11,7 +11,8 @@ import (
 // parseTemplate applies a given file to the body of the base template.
 func parseTemplate(filename string) *appTemplate {
 	tmpl := template.Must(template.ParseFiles(
-		"templates/base.html", "templates/contModal.html"))
+		"templates/base.html", "templates/contModal.html",
+		"templates/contTakeModal.html"))
 
 	// Put the named file into a template called "body"
 	path := filepath.Join("templates", filename)

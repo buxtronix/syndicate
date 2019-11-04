@@ -1,0 +1,66 @@
+<h3>Misc debits/credits for {{.User.Name}}</h3>
+<button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addDCModal">
+	Add Debit / Credit
+</button>
+<br/><br/>
+<table class="table table-hover shadow table-sm">
+  <thead class="thead-light">
+    <tr>
+      <th>Date</th>
+      <th>Comment</th>
+      <th>Amount</th>
+    </tr>
+  </thead>
+<tbody>
+{{ range .Dcs }}
+    <tr {{if lt .Amount 0.0}}class="table-danger"{{end}}>
+      <td>{{.Date.Format "Mon Jan 2 15:04"}}</td>
+      <td>{{.Comment}}</td>
+      <td>{{printf "$%.2f" .Amount}}</td>
+    </tr>
+{{end}}
+</tbody>
+</table>
+
+<div class="modal fade" id="addDCModal" tabindex="-1" role="dialog" aria-labelledby="addDCModalLabel" aria-hidden="true">
+ <div class="modal-dialog" role="document">
+  <div class="modal-content">
+   <div class="modal-header">
+     <h5 class="modal-title" id="addDCModalLabel">Add a debit/credit for {{.User.Name}}</h5>
+     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+     </button>
+   </div>
+   <div class="modal-body">
+<form method="post" enctype="multipart/form-data" action="/debitcredit/add">
+  <div class="form-group row">
+    <label for="amount" class="col-sm-2 col-form-label">Amount&nbsp;$</label>
+    <div class="col-sm-10">
+      <input class="form-control" name="amount" id="amount" required autocomplete="off">
+    </div>
+  </div>
+  <div class="btn-group btn-group-toggle" data-toggle="buttons">
+    <label class="btn btn-primary active btn-type">
+      <input type="radio" name="typeCredit" id="typeCredit" autocomple="off" checked/>Credit
+    </label>
+    <label class="btn btn-default btn-type">
+      <input type="radio" name="typeDebit" id="typeDebit" autocomple="off"/>Debit
+    </label>
+  </div>
+  <div class="form-group row">
+    <label for="comment" class="col-sm-2 col-form-label">Comment</label>
+    <div class="col-sm-10">
+      <input class="form-control" name="comment" id="comment" autocomplete="off" required>
+    </div>
+  </div>
+   </div>
+   <div class="modal-footer">
+       <input type="hidden" name="userid" value="{{.User.ID}}"/>
+     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+     <button type="submit" class="btn btn-primary">Submit</button>
+   </div>
+</form>
+  </div>
+ </div>
+</div>
+
