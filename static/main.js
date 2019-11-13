@@ -86,6 +86,11 @@ $("#untappdid").keyup(function() {
   }, 1000);
   });
 
+$('.btn-type').click(function() {
+    $(this).addClass('btn-primary').removeClass('btn-default').siblings().removeClass('btn-primary').addClass('btn-default');
+});
+
+
 const applicationServerPublicKey = 'BHVIXApfzS25EkHw0YvpE9rHK31lL57eEyZlFGDlaca7A8LYF9hsqZh8GyB1MBq1CCx8VzeHbjjj6RN9KYo9jSU';
 
 var isSubscribed = false;
