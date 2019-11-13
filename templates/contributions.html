@@ -17,7 +17,7 @@
   </thead>
 <tbody>
 {{ range .Contributions }}
-<tr class="clickable {{if lt .Remaining 1}}table-danger{{end}}" onclick="window.location='/contribute/detail/{{.ID}}'">
+<tr class="clickable {{if lt .Remaining 1}}table-danger{{end}}">
 	  <td>
           {{if .GetBeer.LabelURL}}
           <img src="{{.GetBeer.LabelURL}}" height="100" class="rounded float-left mr-2"/>

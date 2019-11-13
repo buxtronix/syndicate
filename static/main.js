@@ -93,7 +93,7 @@ var isSubscribed = false;
 if ('serviceWorker' in navigator && 'PushManager' in window) {
       console.log('Service Worker and Push is supported');
 
-      navigator.serviceWorker.register('static/sw.js')
+      navigator.serviceWorker.register('/static/sw.js')
       .then(function(swReg) {
               console.log('Service Worker is registered', swReg);
 
@@ -105,18 +105,18 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
             });
 } else {
       console.warn('Push messaging is not supported');
-      $('#notifyBtn').text('Push Not Supported');
+//      $('#notifyBtn').text('Push Not Supported');
 }
 
 function initializeUI() {
-    $('#notifyBtn').click(function(){
-        $('#notifyBtn').attr('disabled', true);
-        if (isSubscribed) {
-            unsubscribeUser();
-        } else {
-            subscribeUser();
-        }
-    });
+//    $('#notifyBtn').click(function(){
+//        $('#notifyBtn').attr('disabled', true);
+//        if (isSubscribed) {
+//            unsubscribeUser();
+//        } else {
+//            subscribeUser();
+//        }
+//    });
     swRegistration.pushManager.getSubscription()
     .then(function(subscription) {
         isSubscribed = !(subscription === null);
@@ -125,12 +125,16 @@ function initializeUI() {
             console.log('User is subscribed');
         } else {
             console.log('User not subscribed');
+            if (Notification.permission != 'denied') {
+                subscribeUser();
+            }
         }
+        updateBtn();
     });
-    updateBtn();
 }
 
 function updateBtn() {
+    return;
     if (isSubscribed) {
         $('#notifyBtn').text('Disable push');
     } else {
@@ -140,7 +144,7 @@ function updateBtn() {
     if (Notification.permission === 'denied') {
         $('#notifyBtn').text('Push blocked');
         $('#notifyBtn').attr('disabled', true);
-        updateSubscriptionOnServer(null);
+        // updateSubscriptionOnServer(null);
         return;
     }
 

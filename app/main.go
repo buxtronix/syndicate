@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/buxtronix/syndicate"
+	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -31,9 +31,6 @@ var (
 	dbFile        = flag.String("dbfile", "beer.db", "SQLite database file")
 	untappdID     = flag.String("untappd_id", "", "Client ID for Untappd API")
 	untappdSecret = flag.String("untappd_secret", "", "Secret for Untappd API")
-
-	vapidPublic  = flag.String("vapid_public", "", "VAPID public key")
-	vapidPrivate = flag.String("vapid_private", "", "VAPID private key")
 )
 
 func main() {
@@ -282,7 +279,18 @@ func addContributeHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "error adding contribution: %v", err)
 	}
 	http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", id), http.StatusFound)
-	go sendAllSubscribers("Someone added beer!")
+	beer, _ := cont.GetBeer()
+	user, _ := cont.GetUser()
+	subMsg := subMessage{
+		Message: fmt.Sprintf("%s just added %d of %s (%s)", user.Name, cont.Quantity, beer.Name, beer.Brewery),
+		URI:     fmt.Sprintf("%s/contribute/detail/%d", r.Header.Get("Origin"), id),
+	}
+	cookie, _ := r.Cookie(syndicateCookie)
+	go func() {
+		if err := sendAllSubscribers(subMsg, cookie.Value); err != nil {
+			log.Printf("SENDSUB: %v\n", err)
+		}
+	}()
 	return nil
 }
 
@@ -526,86 +534,6 @@ func userAddHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return nil
 }
 
-func addSubHandler(w http.ResponseWriter, r *http.Request) *appError {
-	endPoint := r.FormValue("endpoint")
-	key := r.FormValue("key")
-	auth := r.FormValue("auth")
-
-	switch {
-	case endPoint == "":
-		return &appError{Error: nil, Message: "missing endpoint"}
-	case key == "":
-		return &appError{Error: nil, Message: "missing key"}
-	case auth == "":
-		return &appError{Error: nil, Message: "missing auth"}
-	}
-
-	sub := &syndicate.Subscription{
-		Endpoint: endPoint,
-		Key:      key,
-		Auth:     auth,
-	}
-	if _, err := syndicate.DB.AddSubscription(sub); err != nil {
-		return appErrorf(err, "error adding subscription: %v", err)
-	}
-	return nil
-}
-
-func delSubHandler(w http.ResponseWriter, r *http.Request) *appError {
-	endPoint := r.FormValue("endpoint")
-	key := r.FormValue("key")
-	auth := r.FormValue("auth")
-
-	switch {
-	case endPoint == "":
-		return &appError{Error: nil, Message: "missing endpoint"}
-	case key == "":
-		return &appError{Error: nil, Message: "missing key"}
-	case auth == "":
-		return &appError{Error: nil, Message: "missing auth"}
-	}
-
-	subs, err := syndicate.DB.ListSubscriptions()
-	if err != nil {
-		return appErrorf(err, "Error listing subscriptions: %v", err)
-	}
-
-	for _, sub := range subs {
-		if sub.Endpoint == endPoint {
-			if err := syndicate.DB.DeleteSubscription(sub.ID); err != nil {
-				return appErrorf(err, "Error removing subscription: %v", err)
-			}
-			return nil
-		}
-	}
-
-	return &appError{Error: nil, Message: "subscription not found"}
-}
-
-func sendAllSubscribers(message string) error {
-	subs, err := syndicate.DB.ListSubscriptions()
-	if err != nil {
-		return err
-	}
-	for _, sub := range subs {
-		s := &webpush.Subscription{
-			Endpoint: sub.Endpoint,
-			Keys: webpush.Keys{
-				Auth:   sub.Auth,
-				P256dh: sub.Key,
-			},
-		}
-		if _, err := webpush.SendNotification([]byte(message), s, &webpush.Options{
-			TTL:             20 * 60 * 60,
-			VAPIDPublicKey:  *vapidPublic,
-			VAPIDPrivateKey: *vapidPrivate,
-		}); err != nil {
-			log.Printf("Error sending notification: %v", err)
-		}
-	}
-	return nil
-}
-
 func userDebitCreditHandler(w http.ResponseWriter, r *http.Request) *appError {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
@@ -694,7 +622,22 @@ type appError struct {
 	Code    int
 }
 
+const syndicateCookie = "beersyndicate-uuid"
+
 func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	_, err := r.Cookie(syndicateCookie)
+	if err == http.ErrNoCookie {
+		http.SetCookie(w, &http.Cookie{
+			Name:    syndicateCookie,
+			Value:   uuid.New().String(),
+			Expires: time.Now().Add(24 * time.Hour * 3650),
+			Path:    "/",
+		})
+		log.Printf("Added cookie...")
+	} else if err != nil {
+		http.Error(w, fmt.Sprintf("Cookie error: %v", err), 500)
+		return
+	}
 	if e := fn(w, r); e != nil { // e is *appError, not os.Error.
 		log.Printf("Handler error: status code: %d, message: %s, underlying err: %#v",
 			e.Code, e.Message, e.Error)

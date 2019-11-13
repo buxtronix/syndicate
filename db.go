@@ -44,7 +44,10 @@ CREATE TABLE IF NOT EXISTS subscriptions(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   endpoint TEXT,
   key TEXT,
-  auth TEXT
+  auth TEXT,
+  userAgent TEXT,
+  host TEXT,
+  cookie TEXT
 );
 CREATE TABLE IF NOT EXISTS debitsCredits(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,9 +77,9 @@ type database struct {
 	addSubscription   *sql.Stmt
 	delSubscription   *sql.Stmt
 
-	listDebitCredits  *sql.Stmt
-	addDebitCredit    *sql.Stmt
-	delDebitCredit    *sql.Stmt
+	listDebitCredits *sql.Stmt
+	addDebitCredit   *sql.Stmt
+	delDebitCredit   *sql.Stmt
 }
 
 var _ BeerDatabase = &database{}
@@ -452,19 +455,25 @@ const listSubscriptionsStmt = `SELECT * FROM subscriptions`
 
 func scanSubs(s rowScanner) (*Subscription, error) {
 	var (
-		id       int64
-		endpoint sql.NullString
-		key      sql.NullString
-		auth     sql.NullString
+		id        int64
+		endpoint  sql.NullString
+		key       sql.NullString
+		auth      sql.NullString
+		userAgent sql.NullString
+		host      sql.NullString
+		cookie    sql.NullString
 	)
-	if err := s.Scan(&id, &endpoint, &key, &auth); err != nil {
+	if err := s.Scan(&id, &endpoint, &key, &auth, &userAgent, &host, &cookie); err != nil {
 		return nil, err
 	}
 	sub := &Subscription{
-		ID:       id,
-		Endpoint: endpoint.String,
-		Key:      key.String,
-		Auth:     auth.String,
+		ID:        id,
+		Endpoint:  endpoint.String,
+		Key:       key.String,
+		Auth:      auth.String,
+		UserAgent: userAgent.String,
+		Host:      host.String,
+		Cookie:    cookie.String,
 	}
 	return sub, nil
 }
@@ -488,10 +497,11 @@ func (d *database) ListSubscriptions() ([]*Subscription, error) {
 
 const addSubscriptionStmt = `
 INSERT INTO subscriptions (
-endpoint, key, auth) VALUES (?, ?, ?)`
+endpoint, key, auth, userAgent, host, cookie) VALUES (?, ?, ?, ?, ?, ?)`
 
 func (d *database) AddSubscription(s *Subscription) (int64, error) {
-	r, err := execAffectingOneRow(d.addSubscription, s.Endpoint, s.Key, s.Auth)
+	r, err := execAffectingOneRow(d.addSubscription, s.Endpoint, s.Key, s.Auth,
+		s.UserAgent, s.Host, s.Cookie)
 	if err != nil {
 		return 0, nil
 	}

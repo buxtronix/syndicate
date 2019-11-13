@@ -298,6 +298,12 @@ type Subscription struct {
 	Key string
 	// Auth is the push auth field.
 	Auth string
+	// UserAgent is the subscriber's user agent.
+	UserAgent string
+	// Host is the subscribing user agent address.
+	Host string
+	// Cookie is the cookie of the browser.
+	Cookie string
 }
 
 // DebitCredit represents a misc non-beer debit or credit for a user.
