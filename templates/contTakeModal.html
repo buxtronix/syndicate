@@ -10,9 +10,9 @@
    <div class="modal-body">
    <div class="modal-comment text-center"></div>
 <form method="post" enctype="multipart/form-data" action="/checkout">
-  <div class="form-group">
+  <div class="form-group" id="userlist">
     <label for="user">User</label>
-    <select class="custom-select" name="userid" required>
+    <select class="custom-select" name="userid" required id="userSelect">
 <option selected value="">Select user</option>
 {{ range .Users }}
 <option value="{{.ID}}">{{.Name}}</option>
@@ -21,7 +21,15 @@
   </div>
   <div class="form-group">
     <label for="quantity">Quantity</label>
-    <input class="form-control" name="quantity" id="quantity" type="number" min="1" autocorrect="off" autocomplete="off" required>
+    <select class="custom-select" name="twelfths" required>
+        <option value="3">1/4</option>
+        <option value="4">1/3</option>
+        <option value="6">1/2</option>
+        <option selected value="12">1</option>
+        <option value="24">2</option>
+        <option value="36">3</option>
+        <option value="48">4</option>
+    </select>
   </div>
    </div>
    <div class="modal-footer">

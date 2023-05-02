@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/buxtronix/syndicate"
@@ -19,6 +20,7 @@ import (
 
 var (
 	listTmpl        = parseTemplate("beers.html")
+	howtoTmpl       = parseTemplate("howto.html")
 	usersTmpl       = parseTemplate("users.html")
 	contributeTmpl  = parseTemplate("contributions.html")
 	contDetailTmpl  = parseTemplate("contDetail.html")
@@ -55,6 +57,9 @@ func registerHandlers() {
 	r := mux.NewRouter()
 
 	r.Handle("/", http.RedirectHandler("/checkout", http.StatusFound))
+
+	r.Methods("GET").Path("/howto").
+		Handler(appHandler(howtoHandler))
 
 	r.Methods("GET").Path("/beers").
 		Handler(appHandler(beersHandler))
@@ -103,6 +108,11 @@ func registerHandlers() {
 	http.Handle("/", handlers.CombinedLoggingHandler(os.Stderr, r))
 }
 
+// howtoHandler handles display of the FAQ/etc.
+func howtoHandler(w http.ResponseWriter, r *http.Request) *appError {
+	return howtoTmpl.Execute(w, r, nil)
+}
+
 type beerForm struct {
 	Beers []*syndicate.Beer
 	Users []*syndicate.User
@@ -131,19 +141,29 @@ var untappdRE = regexp.MustCompile("([0-9]+)$")
 func addBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 	var uti int64
 	var err error
-	if fv := r.FormValue("untappdid"); fv != "" {
+
+	fv := r.FormValue("untappdid")
+	if fv == "" {
+		return appErrorf(err, "Missing Untappd ID")
+	}
+	if strings.HasPrefix(fv, "http") {
+		uti, err = syndicate.ResolveShortURL(fv)
+		if err != nil {
+			return appErrorf(err, "Error resolving Untappd shortcut: %v", err)
+		}
+	} else {
 		uti, err = strconv.ParseInt(untappdRE.FindString(fv), 10, 64)
 		if err != nil {
 			return appErrorf(err, "UntappdID must be a number: %v", err)
 		}
-		beers, err := syndicate.DB.ListBeers()
-		if err != nil {
-			return appErrorf(err, "error querying existing db: %v", err)
-		}
-		for _, b := range beers {
-			if uti > 0 && b.UntappdID == uti {
-				return appErrorf(err, "Already have a beer with that untappd id")
-			}
+	}
+	beers, err := syndicate.DB.ListBeers()
+	if err != nil {
+		return appErrorf(err, "error querying existing db: %v", err)
+	}
+	for _, b := range beers {
+		if uti > 0 && b.UntappdID == uti {
+			return appErrorf(err, "Already have a beer with that untappd id")
 		}
 	}
 	beer := &syndicate.Beer{
@@ -173,12 +193,18 @@ func addBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 func untappdBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 	var uti int64
 	var err error
-	if fv := r.FormValue("id"); fv != "" {
+	fv := r.FormValue("id")
+	if fv == "" {
+		return appErrorf(err, "Missing Untappd ID")
+	}
+	if strings.HasPrefix(fv, "http") {
+		uti, err = syndicate.ResolveShortURL(fv)
+	} else {
 		uti, err = strconv.ParseInt(untappdRE.FindString(fv), 10, 64)
-		if err != nil {
-			w.Write([]byte("not a valid beer id"))
-			return nil
-		}
+	}
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Invalid beer id: %v", err)))
+		return nil
 	}
 	bInfo, _, err := syndicate.Untappd.GetBeerInfo(uti)
 	if err != nil {
@@ -383,40 +409,46 @@ func addCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "error fetching contribution id %d: %v", contID, err)
 	}
 
+	validateUser := func(UID int64) *appError {
+		users, err := syndicate.DB.ListUsers()
+		if err != nil {
+			return appErrorf(err, "error fetching user list: %v", err)
+		}
+		foundUser := false
+		for _, u := range users {
+			if u.ID == UID {
+				foundUser = true
+			}
+		}
+		if !foundUser {
+			return appErrorf(err, "Unknown user id: %d: %v", UID, err)
+		}
+		return nil
+	}
+
 	userID, err := strconv.ParseInt(r.FormValue("userid"), 10, 64)
 	if err != nil {
 		return appErrorf(err, "error parsing user id: %v", err)
 	}
-	users, err := syndicate.DB.ListUsers()
+	if err := validateUser(userID); err != nil {
+		return err
+	}
+	twelfths, err := strconv.ParseInt(r.FormValue("twelfths"), 10, 64)
 	if err != nil {
-		return appErrorf(err, "error fetching user list: %v", err)
-	}
-	foundUser := false
-	for _, u := range users {
-		if u.ID == userID {
-			foundUser = true
-		}
-	}
-	if !foundUser {
-		return appErrorf(err, "Unknown user id: %d: %v", userID, err)
-	}
-
-	quantity, err := strconv.ParseInt(r.FormValue("quantity"), 10, 64)
-	if err != nil {
-		return appErrorf(err, "error parsing quantity id: %v", err)
+		return appErrorf(err, "error parsing id: %v", err)
 	}
 	remaining, err := contr.Remaining()
 	if err != nil {
 		return appErrorf(err, "error finding remaining amount: %v", err)
 	}
 
-	if quantity > remaining {
-		return appErrorf(err, "attempt to checkout %d with only %d available", quantity, remaining)
+	if float64(twelfths)/12 > remaining {
+		return appErrorf(err, "attempt to checkout %d with only %d available", twelfths/12, remaining)
 	}
 	with := &syndicate.Checkout{
 		User:         int64(userID),
 		Contribution: int64(contID),
-		Quantity:     int64(quantity),
+		Twelfths:     twelfths,
 		Date:         time.Now(),
 	}
 	_, err = syndicate.DB.AddCheckout(with)

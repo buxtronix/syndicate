@@ -7,6 +7,8 @@ import (
 	"github.com/mdlayher/untappd"
 )
 
+var fractions = []string{"", "¹⁄₁₂", "⅙", "¼", "⅓", "⁵⁄₁₂", "½", "⁷⁄₁₂", "⅔", "¾", "⅚", "¹¹⁄₁₂"}
+
 // User represents a Syndicate user.
 type User struct {
 	// ID is the unique user id.
@@ -51,7 +53,7 @@ func (u *User) TotalTaken() (float64, error) {
 	var total float64
 	for _, t := range takes {
 		if t.User == u.ID {
-			total += float64(t.Quantity) * conts[t.Contribution].UnitPrice
+			total += (float64(t.Twelfths) / 12) * conts[t.Contribution].UnitPrice
 		}
 	}
 	return total, nil
@@ -139,8 +141,8 @@ func (b *Beer) RatingWidth() int {
 }
 
 // Available returns the number of units available of the beer.
-func (b *Beer) Available() (int64, error) {
-	var available int64
+func (b *Beer) Available() (float64, error) {
+	var available int64 // In twelfths.
 	contr, err := DB.ListContributions()
 	if err != nil {
 		return 0, err
@@ -149,7 +151,7 @@ func (b *Beer) Available() (int64, error) {
 	for _, c := range contr {
 		contributions[c.ID] = c
 		if c.Beer == b.ID {
-			available += c.Quantity
+			available += c.Quantity * int64(12)
 		}
 	}
 
@@ -159,10 +161,10 @@ func (b *Beer) Available() (int64, error) {
 	}
 	for _, w := range taken {
 		if contributions[w.Contribution].Beer == b.ID {
-			available -= w.Quantity
+			available -= w.Twelfths
 		}
 	}
-	return available, nil
+	return float64(available) / 12, nil
 }
 
 // GetContribution returns the given contribution.
@@ -226,18 +228,46 @@ func (c *Contribution) GetUser() (*User, error) {
 }
 
 // Remaining is the remaining beer from that contribution.
-func (c *Contribution) Remaining() (int64, error) {
+func (c *Contribution) Remaining() (float64, error) {
 	takes, err := DB.ListCheckouts()
 	if err != nil {
 		return 0, err
 	}
-	remaining := c.Quantity
+	remaining := c.Quantity * 12 // In twelfths
 	for _, take := range takes {
 		if take.Contribution == c.ID {
-			remaining -= take.Quantity
+			remaining -= take.Twelfths
 		}
 	}
-	return remaining, nil
+	return float64(remaining) / 12, nil
+}
+
+func (c *Contribution) RemainingStr() (string, error) {
+	takes, err := DB.ListCheckouts()
+	if err != nil {
+		return "", err
+	}
+	remaining := c.Quantity * 12 // In twelfths
+	for _, take := range takes {
+		if take.Contribution == c.ID {
+			remaining -= take.Twelfths
+		}
+	}
+	whole := remaining/12
+	remainder := remaining % 12
+	if whole < 1 {
+		return fmt.Sprintf("%s", fractions[remainder]), nil
+	}
+	return fmt.Sprintf("%d%s", whole, fractions[remainder]), nil
+}
+
+// Untouched returns true if none of the contribution has been claimed.
+func (c *Contribution) Untouched() (bool, error) {
+	rem, err := c.Remaining()
+	if err != nil {
+		return false, err
+	}
+	return  float64(c.Quantity) - rem < 0.05, nil // float uncertainty.
 }
 
 // GetCheckouts returns all the checkouts of that contribution.
@@ -264,9 +294,22 @@ type Checkout struct {
 	// Contribution is the contribution taken from.
 	Contribution int64
 	// Quantity is the quantity of beers taken.
-	Quantity int64
+	Quantity float64
 	// Date is the date contributed.
 	Date time.Time
+	// Twelfths is the quantity, in twelfths of a beer. This
+	// allows for splitting by half, quarter, thirds.
+	Twelfths int64
+}
+
+// QuantityStr returns the quantity checked out as a string.
+func (c *Checkout) QuantityStr() string {
+	whole := c.Twelfths/12
+	remainder := c.Twelfths % 12
+	if whole < 1 {
+		return fmt.Sprintf("%s", fractions[remainder])
+	}
+	return fmt.Sprintf("%d%s", whole, fractions[remainder])
 }
 
 // GetUser gets the user associated with a checkout.

@@ -26,7 +26,7 @@
       <td>{{.Time.Format "2 Jan 2006 15:04"}}</td>
       <td>{{.Checkout.GetUser.Name}}</td>
       <td>checked out</td>
-      <td>{{.Checkout.Quantity}}</td>
+      <td>{{.Checkout.QuantityStr}}</td>
       <td>{{.Checkout.GetContribution.GetBeer.Name}} <small><i>/ {{.Checkout.GetContribution.GetBeer.Brewery}}</i></small></td>
     </tr>
         {{ end}}

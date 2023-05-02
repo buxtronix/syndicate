@@ -67,7 +67,7 @@ td .userDetails[aria-expanded="true"]:before{
                       <small>{{.Time.Format "2 Jan 2006 15:04" }}</small>
                   </div>
                   <div class="col-sm-2 text-right">
-                      checked out {{.Checkout.Quantity}}
+                      checked out {{.Checkout.QuantityStr}}
                   </div>
                   <div class="col-sm text-left">
                  <a href="https://untappd.com/beer/{{.Checkout.GetContribution.GetBeer.UntappdID}}" target=_blank>{{.Checkout.GetContribution.GetBeer.Name}}</a> <small><i>/ {{.Checkout.GetContribution.GetBeer.Brewery}}</i></small>

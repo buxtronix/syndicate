@@ -17,7 +17,7 @@
   </thead>
 <tbody>
 {{ range .Contributions }}
-<tr class="clickable {{if lt .Remaining 1}}table-danger{{end}}">
+<tr class="clickable {{if lt .Remaining 0.5}}table-danger{{end}}">
 	  <td>
           {{if .GetBeer.LabelURL}}
           <img src="{{.GetBeer.LabelURL}}" height="100" class="rounded float-left mr-2"/>
@@ -32,13 +32,13 @@
 	  </td>
       <td><b>{{.Quantity}}</b>&nbsp;by&nbsp;{{.GetUser.Name}}<br/><i><small>on {{.Date.Format "2 Jan '06"}}</small></i></td>
 	  <td>{{printf "$%.2f" .UnitPrice}}</td>
-      <td><font size="+1"><b>{{.Remaining}}</b></font><br/><small><i><a href="/contribute/detail/{{.ID}}">Details</a></i></td>
+      <td><font size="+1"><b>{{.RemainingStr}}</b></font><br/><small><i><a href="/contribute/detail/{{.ID}}">Details</a></i></td>
         <td>
 	<button class="btn btn-success btn-sm mb-2" data-toggle="modal" data-target="#addContModal" data-beerid="{{.GetBeer.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}">
   Contribute
 	</button>
 	<br/>
-    <button class="btn btn-info btn-sm" {{if lt .GetBeer.Available 1}}disabled{{end}} data-toggle="modal" data-target="#takeContModal" data-contid="{{.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}" data-comment="{{.Comment}}" data-return="0">
+    <button class="btn btn-info btn-sm" {{if lt .GetBeer.Available 0.1}}disabled{{end}} data-toggle="modal" data-target="#takeContModal" data-contid="{{.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}" data-comment="{{.Comment}}" data-return="0">
   Checkout
 	</button>
       </td>

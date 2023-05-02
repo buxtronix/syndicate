@@ -2,8 +2,11 @@
 package syndicate
 
 import (
+	"fmt"
 	"math"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mdlayher/untappd"
@@ -53,4 +56,55 @@ func (u *UntappdClient) GetUserCheckins(id string, count int) ([]*untappd.Checki
 		return nil, err
 	}
 	return newCheckins, nil
+}
+
+// Takes a shortcut URL, typically of the form https://untp.beer/0rqOe and
+// queries it to fetch the beer ID.
+func ResolveShortURL(uri string) (int64, error) {
+	var number string
+	if strings.Contains(uri, "untp.beer") {
+		// Create a new http client.
+		client := &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+
+		// Make the request to the url.
+		req, err := http.NewRequest("GET", uri, nil)
+		if err != nil {
+			return 0, err
+		}
+
+		// Do the request.
+		resp, err := client.Do(req)
+		if err != nil {
+			return 0, err
+		}
+
+		// Check the response status code.
+		if resp.StatusCode != 302 {
+			return 0, fmt.Errorf("Expected a 302 redirect, got %d", resp.StatusCode)
+		}
+
+		// Get the redirect url.
+		redirectUrl, err := resp.Location()
+		if err != nil {
+			return 0, err
+		}
+
+		// Get the number from the redirect url.
+		number = redirectUrl.Path[strings.LastIndex(redirectUrl.Path, "/")+1:]
+	} else {
+		number = uri[strings.LastIndex(uri, "/")+1:]
+	}
+
+	// Convert the number to an int64.
+	i, err := strconv.ParseInt(number, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	// Return the number.
+	return i, nil
 }

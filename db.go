@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS checkouts(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user INTEGER,
   contribution INTEGER,
-  quantity INTEGER,
+  quantity REAL,
+  twelfths INTEGER,
   date INTEGER
 );
 CREATE TABLE IF NOT EXISTS subscriptions(
@@ -386,17 +387,19 @@ func scanCheckouts(s rowScanner) (*Checkout, error) {
 		id           int64
 		user         sql.NullInt64
 		contribution sql.NullInt64
-		quantity     sql.NullInt64
+		quantity     sql.NullFloat64
 		date         sql.NullInt64
+		twelfths     sql.NullInt64
 	)
-	if err := s.Scan(&id, &user, &contribution, &quantity, &date); err != nil {
+	if err := s.Scan(&id, &user, &contribution, &quantity, &date, &twelfths); err != nil {
 		return nil, err
 	}
 	with := &Checkout{
 		ID:           id,
 		User:         user.Int64,
 		Contribution: contribution.Int64,
-		Quantity:     quantity.Int64,
+		Quantity:     quantity.Float64,
+		Twelfths:     twelfths.Int64,
 		Date:         time.Unix(date.Int64, 0),
 	}
 	return with, nil
@@ -423,12 +426,12 @@ func (d *database) ListCheckouts() ([]*Checkout, error) {
 
 const addCheckoutStmt = `
 INSERT INTO checkouts (
-  user, contribution, quantity, date
+  user, contribution, date, twelfths
   ) VALUES (?, ?, ?, ?)`
 
 // AddCheckout adds a new checkout.
 func (d *database) AddCheckout(c *Checkout) (int64, error) {
-	r, err := execAffectingOneRow(d.addCheckout, c.User, c.Contribution, c.Quantity, c.Date.Unix())
+	r, err := execAffectingOneRow(d.addCheckout, c.User, c.Contribution, c.Date.Unix(), c.Twelfths)
 	if err != nil {
 		return 0, err
 	}
