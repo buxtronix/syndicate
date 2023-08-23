@@ -37,10 +37,16 @@ func NewUntappdClient(untappdID, untappdSecret string) error {
 	return nil
 }
 
-// UntappdGetBeerInfo returns untappd info, given an untappd beer id.
+// GetBeerInfo returns untappd info, given an untappd beer id.
 func (u *UntappdClient) GetBeerInfo(id int64) (*untappd.Beer, *http.Response, error) {
 	return u.utc.Beer.Info(int(id), true)
 }
+
+// SearchBeer returns a list of beers matching the search query.
+func (u *UntappdClient) SearchBeer(query string) ([]*untappd.Beer, *http.Response, error) {
+	return u.utc.Beer.Search(query)
+}
+
 
 // UntappdGetUserCheckins returns the last 'count' untappd checkins for 'user'.
 func (u *UntappdClient) GetUserCheckins(id string, count int) ([]*untappd.Checkin, error) {

@@ -19,7 +19,8 @@ $('#addUserModal').on('show.bs.modal', function (event) {
 $('#addBeerModal').on('show.bs.modal', function (event) {
   var button = $(event.relatedTarget) // Button that triggered the modal
   var modal = $(this)
-  $("input[name=untappdid]").val();
+  $("input[name=untappdid]").val("");
+  $("#untappdresult").html("").show();
   setTimeout(function() {
     $("input[name=untappdid]").focus();
   }, 1000);
@@ -50,7 +51,6 @@ $('#takeContModal').on('show.bs.modal', function (event) {
   modal.find('.modal-comment').html('<small><i>' + comment + '</i></small>')
   $("input[name=return]").val(ret);
   $("input[name=contid]").val(cid);
-  $("input[name=quantity]").val("");
 })
 
 $('#delCheckoutModal').on('show.bs.modal', function (event) {

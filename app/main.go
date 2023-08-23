@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/mdlayher/untappd"
 )
 
 var (
@@ -143,6 +144,10 @@ func addBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 	var err error
 
 	fv := r.FormValue("untappdid")
+	bid := r.FormValue("beerid")
+	if bid != "" {
+		fv = bid
+	}
 	if fv == "" {
 		return appErrorf(err, "Missing Untappd ID")
 	}
@@ -193,6 +198,7 @@ func addBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 func untappdBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 	var uti int64
 	var err error
+	var beers []*untappd.Beer
 	fv := r.FormValue("id")
 	if fv == "" {
 		return appErrorf(err, "Missing Untappd ID")
@@ -201,21 +207,43 @@ func untappdBeerHandler(w http.ResponseWriter, r *http.Request) *appError {
 		uti, err = syndicate.ResolveShortURL(fv)
 	} else {
 		uti, err = strconv.ParseInt(untappdRE.FindString(fv), 10, 64)
+		if err != nil {
+			beers, _, err = syndicate.Untappd.SearchBeer(fv)
+		}
 	}
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Invalid beer id: %v", err)))
 		return nil
 	}
-	bInfo, _, err := syndicate.Untappd.GetBeerInfo(uti)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("error querying untappd: %v", err)))
-		return nil
+	if uti > 0 {
+		bInfo, _, err := syndicate.Untappd.GetBeerInfo(uti)
+		if err != nil {
+			w.Write([]byte(fmt.Sprintf("error querying untappd: %v", err)))
+			return nil
+		}
+		if bInfo == nil {
+			w.Write([]byte("Beer ID not found"))
+			return nil
+		}
+		beers = []*untappd.Beer{bInfo}
 	}
-	if bInfo == nil {
-		w.Write([]byte("Beer ID not found"))
-		return nil
+	for idx, beer := range beers {
+		checked := ""
+		if idx > 4 {
+			break // Max 4 beers displayed
+		} else if idx == 0 {
+			checked = "checked"
+		}
+		//		w.Write([]byte(fmt.Sprintf(`<div class="alert alert-info" role="alert">%s <small>(%s)</small></div>`, beer.Name, beer.Brewery.Name)))
+		w.Write([]byte(fmt.Sprintf(`
+  <div class="alert alert-info form-check" role="alert">
+  <input class="form-check-input" type="radio" value="%d" name="beerid" id="beer-id-%d" %s>
+  <label class="form-check-label" for="beer-id-%d">
+  %s <small>(%s)</small>
+  </label>
+  </div>
+`, beer.ID, beer.ID, checked, beer.ID, beer.Name, beer.Brewery.Name)))
 	}
-	w.Write([]byte(fmt.Sprintf(`<div class="alert alert-info" role="alert">%s <small>(%s)</small></div>`, bInfo.Name, bInfo.Brewery.Name)))
 	return nil
 }
 
@@ -395,6 +423,12 @@ func getCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 			form.Contributions = append(form.Contributions, c)
 		}
 	}
+	sort.Slice(form.Contributions, func(i, j int) bool {
+		b1, _ := form.Contributions[i].GetBeer()
+		b2, _ := form.Contributions[j].GetBeer()
+		return b1.Name < b2.Name
+	})
+	contributeTmpl = parseTemplate("contributions.html")
 	return contributeTmpl.Execute(w, r, form)
 }
 

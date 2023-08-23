@@ -5,49 +5,48 @@
 {{else}}
 <a href="/checkout/all">All</a><br/>
 {{end}}
-<table class="table table-hover shadow table-sm">
-  <thead class="thead-light">
-    <tr>
-      <th scope="col">Beer / Brewery</th>
-      <th scope="col">Contributed</th>
-      <th scope="col">Unit Price</th>
-      <th scope="col">Remaining</th>
-      <th scope="col">Actions</th>
-    </tr>
-  </thead>
-<tbody>
-{{ range .Contributions }}
-<tr class="clickable {{if lt .Remaining 0.5}}table-danger{{end}}">
-	  <td>
-          {{if .GetBeer.LabelURL}}
-          <img src="{{.GetBeer.LabelURL}}" height="100" class="rounded float-left mr-2"/>
-          {{end}}
-		  <a href="https://untappd.com/beer/{{.GetBeer.UntappdID}}">{{.GetBeer.Name}}</a><br/>
-		  <i><small><a href="https://untappd.com/brewery/{{.GetBeer.BreweryID}}">{{.GetBeer.Brewery}}</a></small></i>
-      <div>
-		<a href="https://untappd.com/beer/{{.GetBeer.UntappdID}}">
-        <img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.GetBeer.RatingWidth}}px,27px,0px);" title="{{.GetBeer.UntappdRating}}"></a><br/>
-        {{ if .Comment }}<span class="text-muted"><small>Comment: <i>{{.Comment}}</i></small></span>{{ end }}
-	  </div>
-	  </td>
-      <td><b>{{.Quantity}}</b>&nbsp;by&nbsp;{{.GetUser.Name}}<br/><i><small>on {{.Date.Format "2 Jan '06"}}</small></i></td>
-	  <td>{{printf "$%.2f" .UnitPrice}}</td>
-      <td><font size="+1"><b>{{.RemainingStr}}</b></font><br/><small><i><a href="/contribute/detail/{{.ID}}">Details</a></i></td>
-        <td>
-	<button class="btn btn-success btn-sm mb-2" data-toggle="modal" data-target="#addContModal" data-beerid="{{.GetBeer.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}">
-  Contribute
-	</button>
-	<br/>
-    <button class="btn btn-info btn-sm" {{if lt .GetBeer.Available 0.1}}disabled{{end}} data-toggle="modal" data-target="#takeContModal" data-contid="{{.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}" data-comment="{{.Comment}}" data-return="0">
-  Checkout
-	</button>
-      </td>
-    </tr>
-{{else}}
-<tr><td colspan="5">No beer found - go buy some!</td></tr>
-{{end}}
-</tbody>
-</table>
+
+<div class="container">
+    <div class="row">
+        {{ range $index, $element := .Contributions }}
+        <div class="col-lg-3 col-4 mt-2 border">
+            <div class="container">
+              <div class="row"><div class="col">
+                      <center>
+                          <a href="https://untappd.com/beer/{{.GetBeer.UntappdID}}">{{.GetBeer.Name}}</a><br/>
+                  <i><small><a href="https://untappd.com/brewery/{{.GetBeer.BreweryID}}">{{.GetBeer.Brewery}}</a></small></i>
+                  </center>
+              </div></div>
+              <div class="row">
+              <div class="col">
+                  {{if .GetBeer.LabelURL}}
+                  <img src="{{.GetBeer.LabelURL}}" height="100" class="rounded mx-auto d-block img-thumbnail"/>
+                  {{end}}
+                  <a href="https://untappd.com/beer/{{.GetBeer.UntappdID}}">
+                  <img src="/static/5stars.png" style="position: absolute; clip: rect(0px,{{.GetBeer.RatingWidth}}px,27px,0px);" title="{{.GetBeer.UntappdRating}}"></a><br/>
+              </div>
+              <div class="col">
+                  <div>
+                    <i><small>Available:  <b>{{.RemainingStr}}</b></small></i>
+                    <br/>{{printf "$%.2f" .UnitPrice}}
+                    {{ if .Comment }}<span class="text-muted"><small>Comment: <i>{{.Comment}}</i></small></span>{{ end }}
+                  </div>
+                  <button class="btn btn-info btn-sm" {{if lt .GetBeer.Available 0.1}}disabled{{end}} data-toggle="modal" data-target="#takeContModal" data-contid="{{.ID}}" data-beername="{{.GetBeer.Name}}" data-brewer="{{.GetBeer.Brewery}}" data-comment="{{.Comment}}" data-return="0">
+                  Checkout
+                  </button>
+                  <center><small><i><a href="/contribute/detail/{{.ID}}">Details</a></i></small></center>
+              </div>
+            </div></div>
+        </div>
+        <!--
+        {{ if eq $index 3 7 11 15 19 23 27 31}}
+            </div><div class="row">
+        {{ end }}
+        -->
+
+        {{ end }}
+    </div>
+</div>
 
 {{ template "contModal.html" .}}
 {{ template "contTakeModal.html" .}}
