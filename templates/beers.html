@@ -1,10 +1,24 @@
 <h3>Beers</h3>
-<button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addBeerModal">
+<div class="container mb-3">
+ <div class="row">
+  <div class="col-8">
+   <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addBeerModal">
 Add beer
-</button>
-<br/><br/>
-
-<table class="table table-hover shadow table-sm">
+   </button>
+  </div>
+ <div class="col-4 justify-content-end">
+  <div class="input-group">
+    <input type="text" class="form-control border-right-0 border" id="beerSearch" placeholder="Filter...">
+    <span class="input-group-append">
+      <button class="btn btn-outline-secondary border-left-0 border shadow-none" type="button" id="beerSearchClear">
+        <i class="fa fa-times">X</i>
+      </button>
+    </span>
+  </div>
+ </div>
+ </div>
+</div>
+<table class="table table-hover shadow table-sm" id="BeerTable">
   <thead class="thead-light">
     <tr>
       <th scope="col">Beer/Brewery</th>
@@ -14,7 +28,7 @@ Add beer
   </thead>
 <tbody>
 {{ range .Beers }}
-  <tr>
+  <tr class="item">
     <td>
      <img src="{{.LabelURL}}" height="100" class="rounded float-left m-2"/>
 	 <a href="https://untappd.com/beer/{{.UntappdID}}">{{.Name}}</a><br/>

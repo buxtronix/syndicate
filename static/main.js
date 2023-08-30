@@ -62,6 +62,26 @@ $('#delCheckoutModal').on('show.bs.modal', function (event) {
   $("input[name=contid]").val(contid);
 })
 
+// Search functionality in /beers
+$("#beerSearch").keyup(function() {
+    var query = $("#beerSearch").val().toLowerCase();
+    $("#BeerTable tr.item").each(function() {
+        var thing = $(this).find("button");
+        if (thing[0].dataset.beername.toLowerCase().includes(query)) {
+            $(this).show();
+        } else {
+            $(this).hide();
+        }
+    });
+});
+
+$("#beerSearchClear").on('click', function() {
+    $("#beerSearch").val("");
+    $("#BeerTable tr.item").each(function() {
+            $(this).show();
+    });
+});
+
 var untappdtimer;
 $("#untappdid").keyup(function() {
   if (untappdtimer) {

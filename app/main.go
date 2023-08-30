@@ -125,6 +125,9 @@ func beersHandler(w http.ResponseWriter, r *http.Request) *appError {
 	if err != nil {
 		return appErrorf(err, "could not fetch beer list: %v", err)
 	}
+	sort.Slice(beers, func(i, j int) bool {
+		return beers[i].Name < beers[j].Name
+	})
 	users, err := syndicate.DB.ListUsers()
 	if err != nil {
 		return appErrorf(err, "could not fetch user list: %v", err)
@@ -133,6 +136,7 @@ func beersHandler(w http.ResponseWriter, r *http.Request) *appError {
 		Beers: beers,
 		Users: users,
 	}
+	listTmpl = parseTemplate("beers.html")
 	return listTmpl.Execute(w, r, bf)
 }
 
