@@ -47,10 +47,16 @@ $('#takeContModal').on('show.bs.modal', function (event) {
   var comment = button.data('comment')
   var ret = button.data('return')
   var modal = $(this)
-  modal.find('.modal-title').text('Checkout ' + bbrewer + ' ' + bname)
-  modal.find('.modal-comment').html('<small><i>' + comment + '</i></small>')
+//  modal.find('.modal-title').text('Checkout ' + bbrewer + ' ' + bname)
+//  modal.find('.modal-comment').html('<small><i>' + comment + '</i></small>')
+  modal.find('.modal-comment').html('<small><i><b>' + bname + '</b></i> by ' + '<i>' + bbrewer + '</i></small>')
   $("input[name=return]").val(ret);
   $("input[name=contid]").val(cid);
+  $("#checkoutUserRow").children().each(function(idx) {
+      if(idx > 0) {
+          $(this).remove();
+      }
+  });
 })
 
 $('#delCheckoutModal').on('show.bs.modal', function (event) {
@@ -254,4 +260,42 @@ function unsubscribeUser() {
 
               updateBtn();
        });
+}
+
+var checkoutRowIndex = 0;
+function rmvCheckoutUserRow(btn) {
+    btn.parentElement.remove();
+    checkoutRowIndex--;
+    if (checkoutRowIndex == 0) {
+      $('#inputQuantity-0 option[value="-1"]').hide();
+      $('#inputQuantity-0 option[value="12"]').prop('selected', true);
+    }
+}
+
+function addCheckoutUserRow(btn) {
+    checkoutRowIndex++;
+    $("#checkoutUserRow").append(
+          `<div class="input-group mb-2 border p-2" id="checkoutUserRow-${checkoutRowIndex}">
+            <select class="custom-select mr-2" name="userid-${checkoutRowIndex}" required id="inputUserSelect-${checkoutRowIndex}">
+            </select>
+            <select class="custom-select" id="inputQuantity-${checkoutRowIndex}" name="twelfths-${checkoutRowIndex}" required>
+                <option selected value="-1">Split</option>
+                <option value="3">1/4</option>
+                <option value="4">1/3</option>
+                <option value="6">1/2</option>
+                <option value="12">1</option>
+                <option value="24">2</option>
+                <option value="36">3</option>
+                <option value="48">4</option>
+            </select>
+          <i
+            class="p-1 m-1 bg-secondary"
+            aria-hidden="true"
+            style="float: right; margin-right: 5px; color:#fff; font-weight: bold;"
+            onclick="rmvCheckoutUserRow(this);">-</i>
+          </div>
+        `);
+    $("#inputUserSelect-0").find('option').clone().appendTo(`#inputUserSelect-${checkoutRowIndex}`);
+    $('#inputQuantity-0 option[value="-1"]').show();
+    $('#inputQuantity-0 option[value="-1"]').prop('selected', true);
 }

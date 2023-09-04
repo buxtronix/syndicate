@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -464,35 +465,67 @@ func addCheckoutHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return nil
 	}
 
-	userID, err := strconv.ParseInt(r.FormValue("userid"), 10, 64)
-	if err != nil {
-		return appErrorf(err, "error parsing user id: %v", err)
+	users := map[string]int{}
+	twelfths := map[string]int{}
+	var totalTwelfths int
+	for key, vals := range r.Form {
+		for _, val := range vals {
+			field, idx, found := strings.Cut(key, "-")
+			if !found {
+				continue
+			}
+			switch field {
+			case "userid":
+				users[idx], err = strconv.Atoi(val)
+				if err != nil {
+					return appErrorf(err, "error parsing form key %s: %v", key, err)
+				}
+				if err := validateUser(int64(users[idx])); err != nil {
+					return err
+				}
+			case "twelfths":
+				twelfths[idx], err = strconv.Atoi(val)
+				if err != nil {
+					return appErrorf(err, "error parsing form key %s: %v", key, err)
+				}
+				totalTwelfths += twelfths[idx]
+			}
+		}
 	}
-	if err := validateUser(userID); err != nil {
-		return err
+
+	// Handle split checkouts.
+	for key, tw := range twelfths {
+		if tw < 0 {
+			twelfths[key] = 12 / len(twelfths)
+		}
 	}
-	twelfths, err := strconv.ParseInt(r.FormValue("twelfths"), 10, 64)
-	if err != nil {
-		return appErrorf(err, "error parsing id: %v", err)
-	}
+
 	remaining, err := contr.Remaining()
 	if err != nil {
 		return appErrorf(err, "error finding remaining amount: %v", err)
 	}
 
-	if float64(twelfths)/12 > remaining {
-		return appErrorf(err, "attempt to checkout %d with only %d available", twelfths/12, remaining)
+	if float64(totalTwelfths)/12 > remaining {
+		return appErrorf(err, "attempt to checkout %d with only %d available", totalTwelfths/12, remaining)
 	}
-	with := &syndicate.Checkout{
-		User:         int64(userID),
-		Contribution: int64(contID),
-		Twelfths:     twelfths,
-		Date:         time.Now(),
+
+	for idx, user := range users {
+		tw, ok := twelfths[idx]
+		if !ok {
+			return appErrorf(errors.New("checkout error"), "Didnt read quantity for user %s", user)
+		}
+		with := &syndicate.Checkout{
+			User:         int64(user),
+			Contribution: int64(contID),
+			Twelfths:     int64(tw),
+			Date:         time.Now(),
+		}
+		_, err = syndicate.DB.AddCheckout(with)
+		if err != nil {
+			return appErrorf(err, "error adding checkout: %v", err)
+		}
 	}
-	_, err = syndicate.DB.AddCheckout(with)
-	if err != nil {
-		return appErrorf(err, "error adding checkout: %v", err)
-	}
+
 	if ret, _ := strconv.ParseInt(r.FormValue("return"), 10, 64); ret > 0 {
 		http.Redirect(w, r, fmt.Sprintf("/contribute/detail/%d", ret), http.StatusFound)
 	} else {
